@@ -124,14 +124,9 @@ Tests mock HTTP with `responses`; no test calls real providers.
 
 ## Render
 
-Create a Blueprint with custom path `backend/render.yaml`. It defines a paid service
-with a persistent disk at `/var/data`, two gunicorn workers and four threads per worker,
-locked production dependencies, static collection and `/api/health` monitoring.
-Set `TOMTOM_API_KEY` and `CORS_ALLOWED_ORIGINS` during setup; set the frontend's
-`VITE_API_URL` to this service's HTTPS origin. `.python-version` selects Python 3.12.
-Automatic deployments are disabled. No deployment was performed in this task.
-
-HTTPS redirects, HSTS, secure cookies, nosniff and frame protection default on in
-production. TLS terminates at Render's trusted proxy. The disk persists the shared
-cache across restarts, but restricts the service to one instance and entails a brief
-redeploy interruption. No database service is required.
+Create a Blueprint with custom path `backend/render.yaml`. It defines a free web service
+(two gunicorn workers, four threads each), locked production dependencies, static collection
+and `/api/health` monitoring. The free plan has no persistent disk, so the file cache lives in
+`/tmp/spotter-cache` (shared by the workers, lost when the instance sleeps or restarts) and the
+service sleeps after ~15 idle minutes; the frontend pings `/api/health` on load to wake it.
+Set `TOMTOM_API_KEY` and `CORS_ALLOWED_ORIGINS` (the Vercel origin) in the Render dashboard.

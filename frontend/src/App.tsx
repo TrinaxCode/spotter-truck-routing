@@ -137,6 +137,13 @@ export function App() {
     }
   }
 
+  // The free-tier API host sleeps when idle; wake it while the driver fills in the form.
+  useEffect(() => {
+    const controller = new AbortController();
+    api.health(controller.signal).catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+
   // Swapping the form for the results (or back) removes the focused control; hand focus on.
   useEffect(() => {
     if (status !== "ready") return;

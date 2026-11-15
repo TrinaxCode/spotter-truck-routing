@@ -17,6 +17,7 @@ from .sampling import (
     Coord,
     distance_to_polyline,
     sample_checkpoints,
+    simplify,
 )
 
 
@@ -113,8 +114,10 @@ class TomTomProvider:
 def distinct(candidate: Route, existing: Sequence[Route]) -> bool:
     samples = sample_checkpoints(candidate.coords, max(candidate.distance_mi / 100, .1),
                                  candidate.distance_mi)
-    return all(sum(distance_to_polyline((p.lon, p.lat), route.coords) <= 2 for p in samples)
-               / len(samples) < .8 for route in existing)
+    # ~0.35 mi simplification error is far below the 2 mi proximity threshold.
+    lines = [simplify(route.coords, .005) for route in existing]
+    return all(sum(distance_to_polyline((p.lon, p.lat), line) <= 2 for p in samples)
+               / len(samples) < .8 for line in lines)
 
 
 def via_points(origin: Coord, destination: Coord) -> list[Coord]:

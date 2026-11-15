@@ -12,7 +12,7 @@ const fetchHeatmap = vi.fn();
 
 vi.mock("./api/client", () => ({
   api: {
-    health: vi.fn(),
+    health: vi.fn(async () => ({ status: "ok" })),
     geocode: vi.fn(async () => ({ results: [] })),
     planRoutes: (...args: unknown[]) => planRoutes(...args),
     fetchHeatmap: (...args: unknown[]) => fetchHeatmap(...args),
