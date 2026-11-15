@@ -56,20 +56,26 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       throw new ApiError(0, "network_error", "The dispatch service could not be reached.");
     }
     if (!response.ok) {
-      let envelope: ErrorEnvelope | null = null;
+      // Proxies and crashes can answer with HTML or a bare `{detail}`; never assume the envelope.
+      let error: Partial<ErrorEnvelope["error"]> | undefined;
       try {
-        envelope = (await response.json()) as ErrorEnvelope;
+        error = ((await response.json()) as Partial<ErrorEnvelope> | null)?.error;
       } catch {
-        envelope = null;
+        error = undefined;
       }
       throw new ApiError(
         response.status,
-        envelope?.error.code ?? "http_error",
-        envelope?.error.message ?? `Request failed (${response.status}).`,
-        envelope?.error.fields,
+        typeof error?.code === "string" ? error.code : "http_error",
+        typeof error?.message === "string" ? error.message : `Request failed (${response.status}).`,
+        error?.fields,
       );
     }
-    return (await response.json()) as T;
+    try {
+      return (await response.json()) as T;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") throw error;
+      throw new ApiError(response.status, "invalid_response", "The dispatch service sent an unreadable reply.");
+    }
   }
 
   return {

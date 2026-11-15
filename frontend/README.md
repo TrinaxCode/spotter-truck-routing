@@ -43,6 +43,17 @@ Each corridor cell is one GeoJSON polygon. The 49 hourly values live on the feat
 
 Basemap: OpenFreeMap Positron in light mode and OpenFreeMap Dark in dark mode. Theme is stored in `localStorage` (`spotter-theme`). Changing theme calls `setStyle` and restores sources. That path is not the slider path.
 
+Framing: `fitBounds` pads by the measured size of the legend and zoom control plus a 44 px pin
+radius, so the Start/End pins stay clear of them (Playwright checks 375, 768 and 1280 px). The
+map re-frames on legend/map resizes until the user moves it.
+
+## API contract
+
+`src/mocks/backend-plan.sample.json` and `backend-heatmap.sample.json` are real backend output
+(see `backend/tests/test_frontend_contract.py`). `src/api/contract.test.ts` checks them against
+`src/api/types.ts`, and `src/App.test.tsx` renders the app from them. Error bodies follow
+`{"error":{"code","message","fields"}}` with DRF-style `fields` (lists, nested for locations).
+
 ## Mock limits
 
 - Fixtures are three Dallas–Denver corridors (10 / 25 / 50 mile spacing) plus one 49-hour grid. Other origins and destinations warp that geometry. They are not a second routing engine.

@@ -18,6 +18,14 @@ const STYLES = {
   dark: "https://tiles.openfreemap.org/styles/dark",
 } as const;
 
+/** Half of a 44 px map pin plus a gap. */
+const PIN_CLEARANCE_PX = 30;
+/**
+ * The attribution control is empty until credits load, after the first fit, so its band
+ * (a 44 px target on mobile, a 24 px bar plus margins on desktop) is reserved up front.
+ */
+const ATTRIBUTION_BAND_PX = 48;
+
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
 const ROUTE_SOURCE = "routes";
@@ -95,6 +103,7 @@ export function createMapController(container: HTMLElement, options: MapControll
   let styled = false;
   let booted = false;
   let plan: PlanResponse | null = null;
+  let autoFramed: PlanResponse | null = null;
   let heat: HeatmapResponse | null = null;
   let selectedId = "";
   let hour = 0;
@@ -104,9 +113,17 @@ export function createMapController(container: HTMLElement, options: MapControll
   const hits = new Map<string, CheckpointHit>();
 
   const resize = new ResizeObserver(() => {
-    if (alive) map.resize();
+    if (!alive) return;
+    map.resize();
+    refit();
   });
   resize.observe(container);
+  const legend = container.parentElement?.querySelector(".legend");
+  if (legend) resize.observe(legend);
+  // A gesture hands the camera to the user; programmatic moves carry no originalEvent.
+  map.on("movestart", (event) => {
+    if (event.originalEvent) autoFramed = null;
+  });
 
   map.on("error", (event) => {
     const message = event.error?.message ?? "";
@@ -195,7 +212,16 @@ export function createMapController(container: HTMLElement, options: MapControll
       id: "route-casing",
       type: "line",
       source: ROUTE_SOURCE,
-      paint: { "line-color": "#14211b", "line-width": 12, "line-opacity": 0.95 },
+      paint: { "line-color": "#14211b", "line-width": 13, "line-opacity": 0.95 },
+      layout: lineLayout,
+    });
+    // Light halo between the dark casing and the colour: keeps every risk colour, notably the
+    // deep-purple No Travel, at >= 3:1 against its edge on both basemaps.
+    addLayer({
+      id: "route-halo",
+      type: "line",
+      source: ROUTE_SOURCE,
+      paint: { "line-color": "#ffffff", "line-width": 9.5, "line-opacity": 1 },
       layout: lineLayout,
     });
     addLayer({
@@ -204,7 +230,7 @@ export function createMapController(container: HTMLElement, options: MapControll
       source: SEGMENT_SOURCE,
       paint: {
         "line-color": ["coalesce", ["get", "color"], NEUTRAL_ROUTE_COLOR],
-        "line-width": 7,
+        "line-width": 6,
         "line-opacity": 1,
       },
       layout: lineLayout,
@@ -290,7 +316,7 @@ export function createMapController(container: HTMLElement, options: MapControll
     for (const id of ["routes-other", "routes-other-casing"]) {
       if (map.getLayer(id)) map.setFilter(id, other);
     }
-    for (const id of ["route-selected", "route-casing"]) {
+    for (const id of ["route-selected", "route-halo", "route-casing"]) {
       if (map.getLayer(id)) map.setFilter(id, selected);
     }
     paintCheckpoints();
@@ -394,21 +420,60 @@ export function createMapController(container: HTMLElement, options: MapControll
     }
   }
 
-  function fit(next: PlanResponse): void {
+  /**
+   * Padding that keeps the 44 px Start/End pins (and the route) clear of everything laid over
+   * the map: the legend and MapLibre's zoom/attribution controls. Measured, because the legend
+   * wraps differently at every width.
+   */
+  function overlayPadding(): maplibregl.PaddingOptions {
+    const clearance = PIN_CLEARANCE_PX;
+    const area = container.getBoundingClientRect();
+    const padding = {
+      top: clearance,
+      right: clearance,
+      bottom: ATTRIBUTION_BAND_PX + clearance,
+      left: clearance,
+    };
+    const overlays = [
+      ...(container.parentElement?.querySelectorAll(".legend") ?? []),
+      ...container.querySelectorAll(".maplibregl-ctrl-top-right"),
+    ];
+    for (const overlay of overlays) {
+      const box = overlay.getBoundingClientRect();
+      if (box.width === 0 || box.height === 0) continue;
+      // Wide boxes (legend, attribution) claim a horizontal band, tall ones (zoom) a vertical one.
+      if (box.width >= box.height) {
+        if (box.top - area.top < area.bottom - box.bottom) {
+          padding.top = Math.max(padding.top, box.bottom - area.top + clearance);
+        } else {
+          padding.bottom = Math.max(padding.bottom, area.bottom - box.top + clearance);
+        }
+      } else if (box.left - area.left < area.right - box.right) {
+        padding.left = Math.max(padding.left, box.right - area.left + clearance);
+      } else {
+        padding.right = Math.max(padding.right, area.right - box.left + clearance);
+      }
+    }
+    return padding;
+  }
+
+  /** Frames the routes; `plan` stays "auto-framed" until the user (or a checkpoint jump) moves the map. */
+  function fit(next: PlanResponse, animate = true): void {
     const bounds = new maplibregl.LngLatBounds();
     for (const route of next.routes) {
       for (const coord of route.geometry.coordinates) bounds.extend(coord);
     }
     if (bounds.isEmpty()) return;
-    const narrow = window.innerWidth <= 768;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    map.fitBounds(bounds, {
-      padding: narrow
-        ? { top: 44, bottom: 52, left: 10, right: 64 }
-        : { top: 56, bottom: 36, left: 28, right: 64 },
-      duration: reduce ? 0 : 500,
-      maxZoom: 8,
-    });
+    autoFramed = next;
+    // The ResizeObserver is async; frame against the box the padding was just measured in.
+    map.resize();
+    map.fitBounds(bounds, { padding: overlayPadding(), duration: animate && !reduce ? 500 : 0, maxZoom: 8 });
+  }
+
+  /** The legend wraps once the web font arrives and the sheet changes the map height. */
+  function refit(): void {
+    if (alive && styled && plan && autoFramed === plan) fit(plan, false);
   }
 
   function applyPlan(): void {
@@ -461,7 +526,7 @@ export function createMapController(container: HTMLElement, options: MapControll
     if (typeof routeId === "string") options.onSelect(routeId);
   }
 
-  for (const layerId of ["routes-other", "routes-other-casing", "route-selected", "route-casing"]) {
+  for (const layerId of ["routes-other", "routes-other-casing", "route-selected", "route-halo", "route-casing"]) {
     map.on("click", layerId, selectRoute);
     map.on("mouseenter", layerId, () => {
       map.getCanvas().style.cursor = "pointer";
@@ -499,8 +564,15 @@ export function createMapController(container: HTMLElement, options: MapControll
       if (!alive) return;
       plan = next;
       selectedId = next.recommended_route_id;
+      // The previous corridor belongs to the previous trip; drop it until the new one arrives.
+      const stale = heat !== null;
+      heat = null;
       if (!styled) return;
       applyPlan();
+      if (stale) {
+        writeSource(CORRIDOR_SOURCE, EMPTY);
+        applyFrame();
+      }
     },
     setSelected(routeId) {
       if (!alive) return;
@@ -529,6 +601,7 @@ export function createMapController(container: HTMLElement, options: MapControll
       const hit = hits.get(`${routeId}:${index}`);
       options.onInspect(routeId, index);
       if (!hit || !styled) return;
+      autoFramed = null;
       const camera = { center: [hit.lon, hit.lat] as [number, number], zoom: Math.max(map.getZoom(), 6) };
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) map.jumpTo(camera);
       else map.easeTo({ ...camera, duration: 400 });

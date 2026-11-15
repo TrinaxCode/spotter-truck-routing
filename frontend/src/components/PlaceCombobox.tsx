@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { describeApiError } from "../api/errors";
 import type { GeoPoint } from "../api/types";
 
 interface PlaceComboboxProps {
@@ -32,13 +33,12 @@ export function PlaceCombobox({ id, label, value, onChange, search, error, onBlu
     searchRef.current = search;
   }, [search]);
 
+  useEffect(() => () => abortRef.current?.abort(), []);
+
   useEffect(() => {
     const query = text.trim();
     if (value && query === value.label) return;
-    if (query.length < 3) {
-      abortRef.current?.abort();
-      return;
-    }
+    if (query.length < 3) return;
     const timer = window.setTimeout(() => {
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -58,7 +58,7 @@ export function PlaceCombobox({ id, label, value, onChange, search, error, onBlu
           if (caught instanceof DOMException && caught.name === "AbortError") return;
           setOptions([]);
           setOpen(true);
-          setRemoteHint("Search failed. Try again.");
+          setRemoteHint(describeApiError(caught, "Search failed. Try again."));
         })
         .finally(() => {
           if (!controller.signal.aborted) setBusy(false);
@@ -73,6 +73,9 @@ export function PlaceCombobox({ id, label, value, onChange, search, error, onBlu
   const activeId = options.length > 0 ? `${listId}-${active}` : undefined;
 
   function choose(place: GeoPoint) {
+    // A slower request for an older query must not reopen the list over this choice.
+    abortRef.current?.abort();
+    setBusy(false);
     onChange(place);
     setText(place.label);
     setOpen(false);
@@ -125,6 +128,8 @@ export function PlaceCombobox({ id, label, value, onChange, search, error, onBlu
           setText(next);
           if (!value || next !== value.label) onChange(null);
           if (next.trim().length < 3) {
+            abortRef.current?.abort();
+            setBusy(false);
             setOptions([]);
             setRemoteHint("");
             setOpen(false);
@@ -158,6 +163,9 @@ export function PlaceCombobox({ id, label, value, onChange, search, error, onBlu
       <p id={`${id}-hint`} className={error ? "field-error" : "field-hint"}>
         {error || hint || (busy ? "Searching…" : "")}
       </p>
+      <span className="sr-only" role="status">
+        {busy ? "Searching" : open && options.length > 0 ? `${options.length} suggestions available.` : ""}
+      </span>
     </div>
   );
 }

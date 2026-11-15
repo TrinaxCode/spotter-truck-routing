@@ -99,3 +99,46 @@ test("tablet layout keeps the map and the slider in view", async ({ page }) => {
   boxInside(sliderBox!, 768, 1024);
   await page.screenshot({ path: "test-results/layout-768.png" });
 });
+
+type Box = { x: number; y: number; width: number; height: number };
+
+function overlaps(a: Box, b: Box) {
+  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+}
+
+for (const size of [
+  { width: 1280, height: 800 },
+  { width: 768, height: 1024 },
+  { width: 375, height: 812 },
+]) {
+  test(`fitBounds keeps the Start and End pins clear of the legend and controls at ${size.width}px`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize(size);
+    await page.goto("/");
+    await page.getByRole("button", { name: "Plan routes" }).click();
+    await expect(page.getByText("Recommended")).toBeVisible();
+    await expect(page.locator(".map-pin")).toHaveCount(2);
+
+    // The pins settle once fonts are loaded and the legend has its final size.
+    async function violation() {
+      const map = (await page.getByTestId("map-canvas").boundingBox())!;
+      const overlays: { name: string; box: Box }[] = [];
+      for (const selector of [".legend", ".maplibregl-ctrl-top-right", ".maplibregl-ctrl-bottom-right"]) {
+        const box = await page.locator(selector).first().boundingBox();
+        if (box && box.width > 0) overlays.push({ name: selector, box });
+      }
+      if (overlays.length < 2) return "legend or controls are missing";
+      for (const name of ["Origin", "Destination"]) {
+        const pin = (await page.getByRole("button", { name: new RegExp(`^${name},`) }).boundingBox())!;
+        const inside =
+          pin.x >= map.x && pin.y >= map.y && pin.x + pin.width <= map.x + map.width && pin.y + pin.height <= map.y + map.height;
+        if (!inside) return `${name} pin leaves the map`;
+        for (const overlay of overlays) if (overlaps(pin, overlay.box)) return `${name} pin overlaps ${overlay.name}`;
+      }
+      return "";
+    }
+    await expect.poll(violation, { timeout: 5_000 }).toBe("");
+  });
+}

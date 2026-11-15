@@ -47,12 +47,16 @@ export function floorHourIso(iso: string): string {
   return toUtcZ(Math.floor(ms / 3_600_000) * 3_600_000);
 }
 
-/** Hour index of an ETA against the heatmap start. -1 when it falls outside the frames. */
+/**
+ * Heatmap frame whose data a checkpoint's weather is closest to. The backend reads wind from the
+ * nearest hour (ties later) and rain/snow from the hour that closes the ETA, so rounding, not
+ * flooring, picks the frame that agrees with the checkpoint. -1 when outside the frames.
+ */
 export function etaHourIndex(startIso: string, etaIso: string, hours = 49): number {
   const start = Date.parse(startIso);
   const eta = Date.parse(etaIso);
   if (Number.isNaN(start) || Number.isNaN(eta)) return -1;
-  const index = Math.floor((eta - start) / 3_600_000);
+  const index = Math.round((eta - start) / 3_600_000);
   if (index < 0 || index >= hours) return -1;
   return index;
 }

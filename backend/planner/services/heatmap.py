@@ -80,5 +80,8 @@ def get_heatmap(plan_id: str) -> dict:
                 row[variable].append(value)
         for variable in row:
             result[variable].append(row[variable])
-    cache.set(f"heatmap:{plan_id}", result, 6 * 3600)
+    # An outage leaves cells null; caching that would pin an empty map for 6 h. Retries refetch
+    # only the missing batches because successful forecasts are cached separately.
+    if all(forecasts[rounded_coord((c["lon"], c["lat"]))] is not None for c in cells):
+        cache.set(f"heatmap:{plan_id}", result, 6 * 3600)
     return result

@@ -9,7 +9,8 @@ from planner.exceptions import UpstreamError
 
 
 def utc_iso(value: datetime) -> str:
-    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+    """ISO-8601 UTC with `Z`, whole seconds (browsers parse sub-millisecond digits unevenly)."""
+    return value.astimezone(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def cache_key(namespace: str, *values) -> str:

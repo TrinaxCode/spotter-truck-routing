@@ -1,0 +1,1663 @@
+{
+ "plan_id": "c0ffee123456",
+ "generated_at": "2026-11-15T14:00:00Z",
+ "request": {
+  "origin": {
+   "lat": 32.7767,
+   "lon": -96.797,
+   "label": "Dallas, TX, USA"
+  },
+  "destination": {
+   "lat": 39.7392,
+   "lon": -104.9903,
+   "label": "Denver, CO, USA"
+  },
+  "departure": "2026-11-16T14:00:00Z",
+  "load_lbs": 42000,
+  "interval_mi": 50,
+  "hos": true
+ },
+ "recommended_route_id": "r2",
+ "recommendation": {
+  "route_id": "r2",
+  "explanation": [
+   "lower No Travel miles (193.4 vs 238) than Route A."
+  ]
+ },
+ "warnings": [
+  "Route C has incomplete weather coverage (94%); unknown miles are not Low risk. Routes with full coverage take priority in the recommendation.",
+  "No route is currently safe; consider a later departure"
+ ],
+ "routes": [
+  {
+   "id": "r1",
+   "label": "Route A",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -96.797,
+      32.7767
+     ],
+     [
+      -104.9903,
+      39.7392
+     ]
+    ]
+   },
+   "distance_mi": 663.0353734192316,
+   "drive_time_s": 38499.0,
+   "total_time_s": 40299.0,
+   "departure": "2026-11-16T14:00:00Z",
+   "arrival": "2026-11-17T01:11:39Z",
+   "summary": {
+    "miles_by_level": {
+     "low": 75.0,
+     "moderate": 150.0,
+     "high": 50.0,
+     "severe": 150.0,
+     "no_travel": 238.03537341923163,
+     "unknown": 0.0
+    },
+    "avg_risk": 2.4917848427255653,
+    "max_level": 4,
+    "weather_coverage": 1.0,
+    "checkpoint_count": 15,
+    "breaks": [
+     {
+      "type": "break_30m",
+      "at_mile": 495.99713428172646,
+      "start": "2026-11-16T22:00:00Z",
+      "end": "2026-11-16T22:30:00Z"
+     }
+    ]
+   },
+   "checkpoints": [
+    {
+     "index": 0,
+     "mile": 0,
+     "lat": 32.7767,
+     "lon": -96.797,
+     "eta": "2026-11-16T14:00:00Z",
+     "weather": {
+      "wind_mph": 17.8,
+      "gust_mph": 24.9,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 51.0,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T14:00:00Z"
+     },
+     "levels": {
+      "wind": 0,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 0,
+     "level_label": "Low",
+     "reasons": []
+    },
+    {
+     "index": 1,
+     "mile": 50,
+     "lat": 33.29186780380821,
+     "lon": -97.40323689291804,
+     "eta": "2026-11-16T14:48:23Z",
+     "weather": {
+      "wind_mph": 29.1,
+      "gust_mph": 40.7,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 50.1,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T15:00:00Z"
+     },
+     "levels": {
+      "wind": 1,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 1,
+     "level_label": "Moderate",
+     "reasons": [
+      "Wind 29.1 mph \u2192 Moderate"
+     ]
+    },
+    {
+     "index": 2,
+     "mile": 100,
+     "lat": 33.80852073147737,
+     "lon": -98.01122144333408,
+     "eta": "2026-11-16T15:36:46Z",
+     "weather": {
+      "wind_mph": 38.5,
+      "gust_mph": 53.9,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 49.1,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T16:00:00Z"
+     },
+     "levels": {
+      "wind": 3,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 3,
+     "level_label": "Severe",
+     "reasons": [
+      "Wind 38.5 mph with 42,000 lb load \u2192 Severe"
+     ]
+    },
+    {
+     "index": 3,
+     "mile": 150,
+     "lat": 34.326713958270375,
+     "lon": -98.62101858015033,
+     "eta": "2026-11-16T16:25:09Z",
+     "weather": {
+      "wind_mph": 46.4,
+      "gust_mph": 65.0,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 48.4,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T17:00:00Z"
+     },
+     "levels": {
+      "wind": 4,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 4,
+     "level_label": "No Travel",
+     "reasons": [
+      "Wind 46.4 mph with 42,000 lb load \u2192 No Travel"
+     ]
+    },
+    {
+     "index": 4,
+     "mile": 200,
+     "lat": 34.84645741935283,
+     "lon": -99.23263999482708,
+     "eta": "2026-11-16T17:13:33Z",
+     "weather": {
+      "wind_mph": 48.0,
+      "gust_mph": 67.2,
+      "rain_in_hr": 0.39,
+      "snow_in_hr": 0,
+      "temp_f": 47.4,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T18:00:00Z"
+     },
+     "levels": {
+      "wind": 4,
+      "rain": 2,
+      "snow": 0
+     },
+     "level": 4,
+     "level_label": "No Travel",
+     "reasons": [
+      "Wind 48 mph with 42,000 lb load \u2192 No Travel",
+      "Rain 0.39 in/hr \u2192 High"
+     ]
+    },
+    {
+     "index": 5,
+     "mile": 250,
+     "lat": 35.36779681658849,
+     "lon": -99.84613946820171,
+     "eta": "2026-11-16T18:01:56Z",
+     "weather": {
+      "wind_mph": 45.8,
+      "gust_mph": 64.1,
+      "rain_in_hr": 0.6,
+      "snow_in_hr": 0,
+      "temp_f": 46.3,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T19:00:00Z"
+     },
+     "levels": {
+      "wind": 4,
+      "rain": 3,
+      "snow": 0
+     },
+     "level": 4,
+     "level_label": "No Travel",
+     "reasons": [
+      "Wind 45.8 mph with 42,000 lb load \u2192 No Travel",
+      "Rain 0.6 in/hr \u2192 Severe"
+     ]
+    },
+    {
+     "index": 6,
+     "mile": 300,
+     "lat": 35.8907487136537,
+     "lon": -100.46153649200416,
+     "eta": "2026-11-16T18:50:19Z",
+     "weather": {
+      "wind_mph": 38.2,
+      "gust_mph": 53.5,
+      "rain_in_hr": 0.55,
+      "snow_in_hr": 0,
+      "temp_f": 45.4,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T19:00:00Z"
+     },
+     "levels": {
+      "wind": 3,
+      "rain": 3,
+      "snow": 0
+     },
+     "level": 3,
+     "level_label": "Severe",
+     "reasons": [
+      "Wind 38.2 mph with 42,000 lb load \u2192 Severe",
+      "Rain 0.55 in/hr \u2192 Severe"
+     ]
+    },
+    {
+     "index": 7,
+     "mile": 350,
+     "lat": 36.41535747981691,
+     "lon": -101.07888327890613,
+     "eta": "2026-11-16T19:38:42Z",
+     "weather": {
+      "wind_mph": 28.7,
+      "gust_mph": 40.2,
+      "rain_in_hr": 0.26,
+      "snow_in_hr": 0,
+      "temp_f": 44.4,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T20:00:00Z"
+     },
+     "levels": {
+      "wind": 1,
+      "rain": 2,
+      "snow": 0
+     },
+     "level": 2,
+     "level_label": "High",
+     "reasons": [
+      "Wind 28.7 mph \u2192 Moderate",
+      "Rain 0.26 in/hr \u2192 High"
+     ]
+    },
+    {
+     "index": 8,
+     "mile": 400,
+     "lat": 36.94163762262041,
+     "lon": -101.6981969010292,
+     "eta": "2026-11-16T20:27:05Z",
+     "weather": {
+      "wind_mph": 13.0,
+      "gust_mph": 18.2,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 43.7,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T21:00:00Z"
+     },
+     "levels": {
+      "wind": 0,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 0,
+     "level_label": "Low",
+     "reasons": []
+    },
+    {
+     "index": 9,
+     "mile": 450,
+     "lat": 37.46964131760654,
+     "lon": -102.31953875727766,
+     "eta": "2026-11-16T21:15:28Z",
+     "weather": {
+      "wind_mph": 15.4,
+      "gust_mph": 21.6,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0.76,
+      "temp_f": 42.5,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T22:00:00Z"
+     },
+     "levels": {
+      "wind": 0,
+      "rain": 0,
+      "snow": 1
+     },
+     "level": 1,
+     "level_label": "Moderate",
+     "reasons": [
+      "Snow 0.76 in/hr \u2192 Moderate"
+     ]
+    },
+    {
+     "index": 10,
+     "mile": 500,
+     "lat": 37.99937189791701,
+     "lon": -102.94291277001128,
+     "eta": "2026-11-16T22:33:52Z",
+     "weather": {
+      "wind_mph": 23.0,
+      "gust_mph": 32.2,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0.6,
+      "temp_f": 41.4,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T23:00:00Z"
+     },
+     "levels": {
+      "wind": 0,
+      "rain": 0,
+      "snow": 1
+     },
+     "level": 1,
+     "level_label": "Moderate",
+     "reasons": [
+      "Snow 0.6 in/hr \u2192 Moderate"
+     ]
+    },
+    {
+     "index": 11,
+     "mile": 550,
+     "lat": 38.530897742067175,
+     "lon": -103.56839940539734,
+     "eta": "2026-11-16T23:22:15Z",
+     "weather": {
+      "wind_mph": 38.7,
+      "gust_mph": 54.2,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0.76,
+      "temp_f": 40.6,
+      "weather_code": 3,
+      "forecast_time": "2026-11-17T00:00:00Z"
+     },
+     "levels": {
+      "wind": 3,
+      "rain": 0,
+      "snow": 1
+     },
+     "level": 3,
+     "level_label": "Severe",
+     "reasons": [
+      "Wind 38.7 mph with 42,000 lb load \u2192 Severe",
+      "Snow 0.76 in/hr \u2192 Moderate"
+     ]
+    },
+    {
+     "index": 12,
+     "mile": 600,
+     "lat": 39.064216760595365,
+     "lon": -104.19599620460842,
+     "eta": "2026-11-17T00:10:38Z",
+     "weather": {
+      "wind_mph": 45.1,
+      "gust_mph": 63.1,
+      "rain_in_hr": 0.07,
+      "snow_in_hr": 0.28,
+      "temp_f": 39.5,
+      "weather_code": 3,
+      "forecast_time": "2026-11-17T01:00:00Z"
+     },
+     "levels": {
+      "wind": 4,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 4,
+     "level_label": "No Travel",
+     "reasons": [
+      "Wind 45.1 mph with 42,000 lb load \u2192 No Travel"
+     ]
+    },
+    {
+     "index": 13,
+     "mile": 650,
+     "lat": 39.599379922375235,
+     "lon": -104.8257631465705,
+     "eta": "2026-11-17T00:59:02Z",
+     "weather": {
+      "wind_mph": 47.9,
+      "gust_mph": 67.1,
+      "rain_in_hr": 0.35,
+      "snow_in_hr": 0.6,
+      "temp_f": 38.6,
+      "weather_code": 3,
+      "forecast_time": "2026-11-17T01:00:00Z"
+     },
+     "levels": {
+      "wind": 4,
+      "rain": 2,
+      "snow": 1
+     },
+     "level": 4,
+     "level_label": "No Travel",
+     "reasons": [
+      "Wind 47.9 mph with 42,000 lb load \u2192 No Travel",
+      "Rain 0.35 in/hr \u2192 High",
+      "Snow 0.6 in/hr \u2192 Moderate"
+     ]
+    },
+    {
+     "index": 14,
+     "mile": 663.0353734192316,
+     "lat": 39.7392,
+     "lon": -104.9903,
+     "eta": "2026-11-17T01:11:39Z",
+     "weather": {
+      "wind_mph": 47.9,
+      "gust_mph": 67.1,
+      "rain_in_hr": 0.48,
+      "snow_in_hr": 0.44,
+      "temp_f": 38.4,
+      "weather_code": 3,
+      "forecast_time": "2026-11-17T02:00:00Z"
+     },
+     "levels": {
+      "wind": 4,
+      "rain": 2,
+      "snow": 0
+     },
+     "level": 4,
+     "level_label": "No Travel",
+     "reasons": [
+      "Wind 47.9 mph with 42,000 lb load \u2192 No Travel",
+      "Rain 0.48 in/hr \u2192 High"
+     ]
+    }
+   ],
+   "rank": 2,
+   "recommended": false
+  },
+  {
+   "id": "r2",
+   "label": "Route B",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -96.797,
+      32.7767
+     ],
+     [
+      -97.45696014406437,
+      33.249972572032185
+     ],
+     [
+      -98.11075719099992,
+      33.720163595499955
+     ],
+     [
+      -98.54021862892128,
+      34.03042264779397
+     ],
+     [
+      -98.96255,
+      34.33711666666667
+     ],
+     [
+      -99.37611640366795,
+      34.63942820183397
+     ],
+     [
+      -99.77937897017418,
+      34.93658781842042
+     ],
+     [
+      -100.17091172076384,
+      35.227882527048585
+     ],
+     [
+      -100.36186853833115,
+      35.37112510249891
+     ],
+     [
+      -100.73341790871267,
+      35.652428121023
+     ],
+     [
+      -101.09026543870138,
+      35.92638021935069
+     ],
+     [
+      -101.43149368239553,
+      36.1925226745311
+     ],
+     [
+      -101.59601042607224,
+      36.322545213036115
+     ],
+     [
+      -101.9124661611741,
+      36.576301413920376
+     ],
+     [
+      -102.06428634495222,
+      36.69997567247611
+     ],
+     [
+      -102.21177503258924,
+      36.821484182961285
+     ],
+     [
+      -102.35490225560733,
+      36.940811961136994
+     ],
+     [
+      -102.49365,
+      37.05794999999999
+     ],
+     [
+      -102.62801225560732,
+      37.17289529447032
+     ],
+     [
+      -102.75799503258924,
+      37.28565084962795
+     ],
+     [
+      -102.88361634495222,
+      37.396225672476106
+     ],
+     [
+      -103.00490616117409,
+      37.50463474725371
+     ],
+     [
+      -103.12190632206251,
+      37.61089899436459
+     ],
+     [
+      -103.23467042607224,
+      37.71504521303612
+     ],
+     [
+      -103.34326368239553,
+      37.817106007864425
+     ],
+     [
+      -103.44776273222817,
+      37.91711969944741
+     ],
+     [
+      -103.54825543870139,
+      38.01513021935069
+     ],
+     [
+      -103.64484064605512,
+      38.11118698969422
+     ],
+     [
+      -103.73762790871268,
+      38.20534478768967
+     ],
+     [
+      -103.8267371909999,
+      38.297663595499955
+     ],
+     [
+      -103.91229853833116,
+      38.38820843583225
+     ],
+     [
+      -103.99445172076383,
+      38.477049193715246
+     ],
+     [
+      -104.07334584989847,
+      38.56426042494923
+     ],
+     [
+      -104.14913897017418,
+      38.64992115175375
+     ],
+     [
+      -104.22199762567975,
+      38.734114646173204
+     ],
+     [
+      -104.29209640366795,
+      38.816928201833974
+     ],
+     [
+      -104.35961745602405,
+      38.89845289467869
+     ],
+     [
+      -104.42475,
+      38.97878333333333
+     ],
+     [
+      -104.54863862892128,
+      39.1362559811273
+     ],
+     [
+      -104.66539719099993,
+      39.290163595499955
+     ],
+     [
+      -104.72163547216404,
+      39.366046902748685
+     ],
+     [
+      -104.83093014406437,
+      39.51622257203218
+     ],
+     [
+      -104.9903,
+      39.7392
+     ]
+    ]
+   },
+   "distance_mi": 668.3561749383599,
+   "drive_time_s": 36456.0,
+   "total_time_s": 38256.0,
+   "departure": "2026-11-16T14:00:00Z",
+   "arrival": "2026-11-17T00:37:36Z",
+   "summary": {
+    "miles_by_level": {
+     "low": 75.0,
+     "moderate": 50.0,
+     "high": 50.0,
+     "severe": 300.0,
+     "no_travel": 193.3561749383599,
+     "unknown": 0.0
+    },
+    "avg_risk": 2.7282230165998054,
+    "max_level": 4,
+    "weather_coverage": 1.0,
+    "checkpoint_count": 15,
+    "breaks": [
+     {
+      "type": "break_30m",
+      "at_mile": 527.9991078116592,
+      "start": "2026-11-16T22:00:00Z",
+      "end": "2026-11-16T22:30:00Z"
+     }
+    ]
+   },
+   "checkpoints": [
+    {
+     "index": 0,
+     "mile": 0,
+     "lat": 32.7767,
+     "lon": -96.797,
+     "eta": "2026-11-16T14:00:00Z",
+     "weather": {
+      "wind_mph": 17.8,
+      "gust_mph": 24.9,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 51.0,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T14:00:00Z"
+     },
+     "levels": {
+      "wind": 0,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 0,
+     "level_label": "Low",
+     "reasons": []
+    },
+    {
+     "index": 1,
+     "mile": 50,
+     "lat": 33.24703091969992,
+     "lon": -97.45286028449424,
+     "eta": "2026-11-16T14:45:27Z",
+     "weather": {
+      "wind_mph": 31.5,
+      "gust_mph": 44.1,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 50.2,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T15:00:00Z"
+     },
+     "levels": {
+      "wind": 1,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 1,
+     "level_label": "Moderate",
+     "reasons": [
+      "Wind 31.5 mph \u2192 Moderate"
+     ]
+    },
+    {
+     "index": 2,
+     "mile": 100,
+     "lat": 33.71959219351921,
+     "lon": -98.10996384331096,
+     "eta": "2026-11-16T15:30:54Z",
+     "weather": {
+      "wind_mph": 40.2,
+      "gust_mph": 56.3,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 49.2,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T16:00:00Z"
+     },
+     "levels": {
+      "wind": 3,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 3,
+     "level_label": "Severe",
+     "reasons": [
+      "Wind 40.2 mph with 42,000 lb load \u2192 Severe"
+     ]
+    },
+    {
+     "index": 3,
+     "mile": 150,
+     "lat": 34.19525044528824,
+     "lon": -98.76748166379498,
+     "eta": "2026-11-16T16:16:21Z",
+     "weather": {
+      "wind_mph": 47.6,
+      "gust_mph": 66.6,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 48.5,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T17:00:00Z"
+     },
+     "levels": {
+      "wind": 4,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 4,
+     "level_label": "No Travel",
+     "reasons": [
+      "Wind 47.6 mph with 42,000 lb load \u2192 No Travel"
+     ]
+    },
+    {
+     "index": 4,
+     "mile": 200,
+     "lat": 34.67495305735387,
+     "lon": -99.4244312363376,
+     "eta": "2026-11-16T17:01:48Z",
+     "weather": {
+      "wind_mph": 47.5,
+      "gust_mph": 66.5,
+      "rain_in_hr": 0.34,
+      "snow_in_hr": 0,
+      "temp_f": 47.5,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T18:00:00Z"
+     },
+     "levels": {
+      "wind": 4,
+      "rain": 2,
+      "snow": 0
+     },
+     "level": 4,
+     "level_label": "No Travel",
+     "reasons": [
+      "Wind 47.5 mph with 42,000 lb load \u2192 No Travel",
+      "Rain 0.34 in/hr \u2192 High"
+     ]
+    },
+    {
+     "index": 5,
+     "mile": 250,
+     "lat": 35.15978115271045,
+     "lon": -100.07961486282815,
+     "eta": "2026-11-16T17:47:16Z",
+     "weather": {
+      "wind_mph": 42.2,
+      "gust_mph": 59.1,
+      "rain_in_hr": 0.53,
+      "snow_in_hr": 0,
+      "temp_f": 46.6,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T18:00:00Z"
+     },
+     "levels": {
+      "wind": 3,
+      "rain": 3,
+      "snow": 0
+     },
+     "level": 3,
+     "level_label": "Severe",
+     "reasons": [
+      "Wind 42.2 mph with 42,000 lb load \u2192 Severe",
+      "Rain 0.53 in/hr \u2192 Severe"
+     ]
+    },
+    {
+     "index": 6,
+     "mile": 300,
+     "lat": 35.65099430871897,
+     "lon": -100.73153028742952,
+     "eta": "2026-11-16T18:32:43Z",
+     "weather": {
+      "wind_mph": 34.2,
+      "gust_mph": 47.9,
+      "rain_in_hr": 0.58,
+      "snow_in_hr": 0,
+      "temp_f": 45.6,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T19:00:00Z"
+     },
+     "levels": {
+      "wind": 1,
+      "rain": 3,
+      "snow": 0
+     },
+     "level": 3,
+     "level_label": "Severe",
+     "reasons": [
+      "Wind 34.2 mph \u2192 Moderate",
+      "Rain 0.58 in/hr \u2192 Severe"
+     ]
+    },
+    {
+     "index": 7,
+     "mile": 350,
+     "lat": 36.15054307262044,
+     "lon": -101.3778990752474,
+     "eta": "2026-11-16T19:18:10Z",
+     "weather": {
+      "wind_mph": 16.9,
+      "gust_mph": 23.7,
+      "rain_in_hr": 0.36,
+      "snow_in_hr": 0,
+      "temp_f": 44.9,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T20:00:00Z"
+     },
+     "levels": {
+      "wind": 0,
+      "rain": 2,
+      "snow": 0
+     },
+     "level": 2,
+     "level_label": "High",
+     "reasons": [
+      "Rain 0.36 in/hr \u2192 High"
+     ]
+    },
+    {
+     "index": 8,
+     "mile": 400,
+     "lat": 36.66048927711864,
+     "lon": -102.01581359185134,
+     "eta": "2026-11-16T20:03:38Z",
+     "weather": {
+      "wind_mph": 11.4,
+      "gust_mph": 16.0,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 43.9,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T21:00:00Z"
+     },
+     "levels": {
+      "wind": 0,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 0,
+     "level_label": "Low",
+     "reasons": []
+    },
+    {
+     "index": 9,
+     "mile": 450,
+     "lat": 37.18394314651678,
+     "lon": -102.64074804043562,
+     "eta": "2026-11-16T20:49:05Z",
+     "weather": {
+      "wind_mph": 23.4,
+      "gust_mph": 32.8,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 2.67,
+      "temp_f": 43.0,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T21:00:00Z"
+     },
+     "levels": {
+      "wind": 0,
+      "rain": 0,
+      "snow": 3
+     },
+     "level": 3,
+     "level_label": "Severe",
+     "reasons": [
+      "Snow 2.67 in/hr \u2192 Severe"
+     ]
+    },
+    {
+     "index": 10,
+     "mile": 500,
+     "lat": 37.7252897195544,
+     "lon": -103.24557063828513,
+     "eta": "2026-11-16T21:34:32Z",
+     "weather": {
+      "wind_mph": 33.9,
+      "gust_mph": 47.5,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 2.58,
+      "temp_f": 42.0,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T22:00:00Z"
+     },
+     "levels": {
+      "wind": 1,
+      "rain": 0,
+      "snow": 3
+     },
+     "level": 3,
+     "level_label": "Severe",
+     "reasons": [
+      "Wind 33.9 mph \u2192 Moderate",
+      "Snow 2.58 in/hr \u2192 Severe"
+     ]
+    },
+    {
+     "index": 11,
+     "mile": 550,
+     "lat": 38.29012008069676,
+     "lon": -103.81945593156881,
+     "eta": "2026-11-16T22:50:00Z",
+     "weather": {
+      "wind_mph": 42.0,
+      "gust_mph": 58.8,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 2.27,
+      "temp_f": 41.0,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T23:00:00Z"
+     },
+     "levels": {
+      "wind": 3,
+      "rain": 0,
+      "snow": 3
+     },
+     "level": 3,
+     "level_label": "Severe",
+     "reasons": [
+      "Wind 42 mph with 42,000 lb load \u2192 Severe",
+      "Snow 2.27 in/hr \u2192 Severe"
+     ]
+    },
+    {
+     "index": 12,
+     "mile": 600,
+     "lat": 38.88414445349888,
+     "lon": -104.34776680105898,
+     "eta": "2026-11-16T23:35:27Z",
+     "weather": {
+      "wind_mph": 46.0,
+      "gust_mph": 64.4,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 1.64,
+      "temp_f": 39.9,
+      "weather_code": 3,
+      "forecast_time": "2026-11-17T00:00:00Z"
+     },
+     "levels": {
+      "wind": 4,
+      "rain": 0,
+      "snow": 2
+     },
+     "level": 4,
+     "level_label": "No Travel",
+     "reasons": [
+      "Wind 46 mph with 42,000 lb load \u2192 No Travel",
+      "Snow 1.64 in/hr \u2192 High"
+     ]
+    },
+    {
+     "index": 13,
+     "mile": 650,
+     "lat": 39.50649713067111,
+     "lon": -104.82388984935194,
+     "eta": "2026-11-17T00:20:54Z",
+     "weather": {
+      "wind_mph": 48.0,
+      "gust_mph": 67.2,
+      "rain_in_hr": 0.3,
+      "snow_in_hr": 0.91,
+      "temp_f": 39.0,
+      "weather_code": 3,
+      "forecast_time": "2026-11-17T01:00:00Z"
+     },
+     "levels": {
+      "wind": 4,
+      "rain": 2,
+      "snow": 1
+     },
+     "level": 4,
+     "level_label": "No Travel",
+     "reasons": [
+      "Wind 48 mph with 42,000 lb load \u2192 No Travel",
+      "Rain 0.3 in/hr \u2192 High",
+      "Snow 0.91 in/hr \u2192 Moderate"
+     ]
+    },
+    {
+     "index": 14,
+     "mile": 668.3561749383599,
+     "lat": 39.7392,
+     "lon": -104.9903,
+     "eta": "2026-11-17T00:37:36Z",
+     "weather": {
+      "wind_mph": 47.9,
+      "gust_mph": 67.1,
+      "rain_in_hr": 0.39,
+      "snow_in_hr": 0.91,
+      "temp_f": 38.4,
+      "weather_code": 3,
+      "forecast_time": "2026-11-17T01:00:00Z"
+     },
+     "levels": {
+      "wind": 4,
+      "rain": 2,
+      "snow": 1
+     },
+     "level": 4,
+     "level_label": "No Travel",
+     "reasons": [
+      "Wind 47.9 mph with 42,000 lb load \u2192 No Travel",
+      "Rain 0.39 in/hr \u2192 High",
+      "Snow 0.91 in/hr \u2192 Moderate"
+     ]
+    }
+   ],
+   "rank": 1,
+   "recommended": true
+  },
+  {
+   "id": "r3",
+   "label": "Route C",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -96.797,
+      32.7767
+     ],
+     [
+      -96.95636985593563,
+      32.99967742796782
+     ],
+     [
+      -97.06566452783596,
+      33.14985309725131
+     ],
+     [
+      -97.12190280900009,
+      33.22573640450004
+     ],
+     [
+      -97.2386613710787,
+      33.379644018872696
+     ],
+     [
+      -97.36255,
+      33.53711666666667
+     ],
+     [
+      -97.42768254397595,
+      33.617447105321304
+     ],
+     [
+      -97.49520359633205,
+      33.69897179816602
+     ],
+     [
+      -97.56530237432025,
+      33.78178535382679
+     ],
+     [
+      -97.63816102982582,
+      33.86597884824624
+     ],
+     [
+      -97.71395415010153,
+      33.95163957505076
+     ],
+     [
+      -97.79284827923617,
+      34.03885080628475
+     ],
+     [
+      -97.87500146166886,
+      34.12769156416775
+     ],
+     [
+      -97.96056280900008,
+      34.21823640450004
+     ],
+     [
+      -98.04967209128732,
+      34.31055521231033
+     ],
+     [
+      -98.14245935394489,
+      34.40471301030578
+     ],
+     [
+      -98.23904456129861,
+      34.50076978064931
+     ],
+     [
+      -98.33953726777183,
+      34.59878030055258
+     ],
+     [
+      -98.44403631760447,
+      34.69879399213557
+     ],
+     [
+      -98.55262957392776,
+      34.800854786963875
+     ],
+     [
+      -98.66539367793749,
+      34.905001005635405
+     ],
+     [
+      -98.78239383882591,
+      35.011265252746284
+     ],
+     [
+      -98.90368365504779,
+      35.11967432752389
+     ],
+     [
+      -99.02930496741077,
+      35.230249150372046
+     ],
+     [
+      -99.15928774439269,
+      35.34300470552967
+     ],
+     [
+      -99.29365000000001,
+      35.45795
+     ],
+     [
+      -99.43239774439267,
+      35.575088038863
+     ],
+     [
+      -99.57552496741076,
+      35.69441581703871
+     ],
+     [
+      -99.72301365504778,
+      35.81592432752389
+     ],
+     [
+      -99.87483383882591,
+      35.93959858607962
+     ],
+     [
+      -100.19128957392776,
+      36.19335478696388
+     ],
+     [
+      -100.35580631760448,
+      36.3233773254689
+     ],
+     [
+      -100.69703456129862,
+      36.589519780649304
+     ],
+     [
+      -101.05388209128733,
+      36.863471878976995
+     ],
+     [
+      -101.42543146166884,
+      37.14477489750109
+     ],
+     [
+      -101.61638827923616,
+      37.28801747295141
+     ],
+     [
+      -102.00792102982582,
+      37.579312181579574
+     ],
+     [
+      -102.41118359633205,
+      37.87647179816602
+     ],
+     [
+      -102.82475000000001,
+      38.178783333333335
+     ],
+     [
+      -103.24708137107874,
+      38.485477352206026
+     ],
+     [
+      -103.6765428090001,
+      38.79573640450004
+     ],
+     [
+      -104.33033985593563,
+      39.26592742796781
+     ],
+     [
+      -104.9903,
+      39.7392
+     ]
+    ]
+   },
+   "distance_mi": 664.088597590074,
+   "drive_time_s": 41219.0,
+   "total_time_s": 79019.0,
+   "departure": "2026-11-16T14:00:00Z",
+   "arrival": "2026-11-17T11:56:59Z",
+   "summary": {
+    "miles_by_level": {
+     "low": 175.0,
+     "moderate": 150.0,
+     "high": 0.0,
+     "severe": 200.0,
+     "no_travel": 100.0,
+     "unknown": 39.08859759007396
+    },
+    "avg_risk": 1.84,
+    "max_level": 4,
+    "weather_coverage": 0.9411394839003057,
+    "checkpoint_count": 15,
+    "breaks": [
+     {
+      "type": "break_30m",
+      "at_mile": 464.00236915173605,
+      "start": "2026-11-16T22:00:00Z",
+      "end": "2026-11-16T22:30:00Z"
+     },
+     {
+      "type": "rest_10h",
+      "at_mile": 638.0024385943796,
+      "start": "2026-11-17T01:30:00Z",
+      "end": "2026-11-17T11:30:00Z"
+     }
+    ]
+   },
+   "checkpoints": [
+    {
+     "index": 0,
+     "mile": 0,
+     "lat": 32.7767,
+     "lon": -96.797,
+     "eta": "2026-11-16T14:00:00Z",
+     "weather": {
+      "wind_mph": 17.8,
+      "gust_mph": 24.9,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 51.0,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T14:00:00Z"
+     },
+     "levels": {
+      "wind": 0,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 0,
+     "level_label": "Low",
+     "reasons": []
+    },
+    {
+     "index": 1,
+     "mile": 50,
+     "lat": 33.39320143647626,
+     "lon": -97.2492227682523,
+     "eta": "2026-11-16T14:51:43Z",
+     "weather": {
+      "wind_mph": 24.2,
+      "gust_mph": 33.9,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 49.9,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T15:00:00Z"
+     },
+     "levels": {
+      "wind": 0,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 0,
+     "level_label": "Low",
+     "reasons": []
+    },
+    {
+     "index": 2,
+     "mile": 100,
+     "lat": 33.98705015114764,
+     "lon": -97.7459877141711,
+     "eta": "2026-11-16T15:43:26Z",
+     "weather": {
+      "wind_mph": 32.4,
+      "gust_mph": 45.4,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 48.8,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T16:00:00Z"
+     },
+     "levels": {
+      "wind": 1,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 1,
+     "level_label": "Moderate",
+     "reasons": [
+      "Wind 32.4 mph \u2192 Moderate"
+     ]
+    },
+    {
+     "index": 3,
+     "mile": 150,
+     "lat": 34.55258306449664,
+     "lon": -98.29217005364598,
+     "eta": "2026-11-16T16:35:10Z",
+     "weather": {
+      "wind_mph": 40.9,
+      "gust_mph": 57.3,
+      "rain_in_hr": 0.18,
+      "snow_in_hr": 0,
+      "temp_f": 47.7,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T17:00:00Z"
+     },
+     "levels": {
+      "wind": 3,
+      "rain": 1,
+      "snow": 0
+     },
+     "level": 3,
+     "level_label": "Severe",
+     "reasons": [
+      "Wind 40.9 mph with 42,000 lb load \u2192 Severe",
+      "Rain 0.18 in/hr \u2192 Moderate"
+     ]
+    },
+    {
+     "index": 4,
+     "mile": 200,
+     "lat": 35.09481883453196,
+     "lon": -98.87587492977936,
+     "eta": "2026-11-16T17:26:53Z",
+     "weather": {
+      "wind_mph": 47.3,
+      "gust_mph": 66.2,
+      "rain_in_hr": 0.51,
+      "snow_in_hr": 0,
+      "temp_f": 46.9,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T18:00:00Z"
+     },
+     "levels": {
+      "wind": 4,
+      "rain": 3,
+      "snow": 0
+     },
+     "level": 4,
+     "level_label": "No Travel",
+     "reasons": [
+      "Wind 47.3 mph with 42,000 lb load \u2192 No Travel",
+      "Rain 0.51 in/hr \u2192 Severe"
+     ]
+    },
+    {
+     "index": 5,
+     "mile": 250,
+     "lat": 35.620019591179144,
+     "lon": -99.48629071388577,
+     "eta": "2026-11-16T18:18:37Z",
+     "weather": {
+      "wind_mph": 47.7,
+      "gust_mph": 66.8,
+      "rain_in_hr": 0.59,
+      "snow_in_hr": 0,
+      "temp_f": 46.0,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T19:00:00Z"
+     },
+     "levels": {
+      "wind": 4,
+      "rain": 3,
+      "snow": 0
+     },
+     "level": 4,
+     "level_label": "No Travel",
+     "reasons": [
+      "Wind 47.7 mph with 42,000 lb load \u2192 No Travel",
+      "Rain 0.59 in/hr \u2192 Severe"
+     ]
+    },
+    {
+     "index": 6,
+     "mile": 300,
+     "lat": 36.133233109226715,
+     "lon": -100.11593798959129,
+     "eta": "2026-11-16T19:10:21Z",
+     "weather": {
+      "wind_mph": 44.3,
+      "gust_mph": 62.0,
+      "rain_in_hr": 0.4,
+      "snow_in_hr": 0,
+      "temp_f": 45.0,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T20:00:00Z"
+     },
+     "levels": {
+      "wind": 3,
+      "rain": 2,
+      "snow": 0
+     },
+     "level": 3,
+     "level_label": "Severe",
+     "reasons": [
+      "Wind 44.3 mph with 42,000 lb load \u2192 Severe",
+      "Rain 0.4 in/hr \u2192 High"
+     ]
+    },
+    {
+     "index": 7,
+     "mile": 350,
+     "lat": 36.6380477841818,
+     "lon": -100.7600104652164,
+     "eta": "2026-11-16T20:02:04Z",
+     "weather": {
+      "wind_mph": 35.4,
+      "gust_mph": 49.6,
+      "rain_in_hr": 0.02,
+      "snow_in_hr": 0,
+      "temp_f": 44.1,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T21:00:00Z"
+     },
+     "levels": {
+      "wind": 3,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 3,
+     "level_label": "Severe",
+     "reasons": [
+      "Wind 35.4 mph with 42,000 lb load \u2192 Severe"
+     ]
+    },
+    {
+     "index": 8,
+     "mile": 400,
+     "lat": 37.13707666142682,
+     "lon": -101.41523074684531,
+     "eta": "2026-11-16T20:53:47Z",
+     "weather": {
+      "wind_mph": 25.2,
+      "gust_mph": 35.3,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 43.1,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T21:00:00Z"
+     },
+     "levels": {
+      "wind": 1,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 1,
+     "level_label": "Moderate",
+     "reasons": [
+      "Wind 25.2 mph \u2192 Moderate"
+     ]
+    },
+    {
+     "index": 9,
+     "mile": 450,
+     "lat": 37.63217855108485,
+     "lon": -102.07950513357304,
+     "eta": "2026-11-16T21:45:30Z",
+     "weather": {
+      "wind_mph": 10.6,
+      "gust_mph": 14.8,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 42.2,
+      "weather_code": 3,
+      "forecast_time": "2026-11-16T22:00:00Z"
+     },
+     "levels": {
+      "wind": 0,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 0,
+     "level_label": "Low",
+     "reasons": []
+    },
+    {
+     "index": 10,
+     "mile": 500,
+     "lat": 38.12493496087023,
+     "lon": -102.7509507651345,
+     "eta": "2026-11-16T23:07:14Z",
+     "weather": {
+      "wind_mph": 20.4,
+      "gust_mph": 28.6,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 41.2,
+      "weather_code": 3,
+      "forecast_time": "2026-11-17T00:00:00Z"
+     },
+     "levels": {
+      "wind": 0,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 0,
+     "level_label": "Low",
+     "reasons": []
+    },
+    {
+     "index": 11,
+     "mile": 550,
+     "lat": 38.61653328557506,
+     "lon": -103.42828443440912,
+     "eta": "2026-11-16T23:58:58Z",
+     "weather": {
+      "wind_mph": 31.4,
+      "gust_mph": 44.0,
+      "rain_in_hr": 0.0,
+      "snow_in_hr": 0,
+      "temp_f": 40.3,
+      "weather_code": 3,
+      "forecast_time": "2026-11-17T00:00:00Z"
+     },
+     "levels": {
+      "wind": 1,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 1,
+     "level_label": "Moderate",
+     "reasons": [
+      "Wind 31.4 mph \u2192 Moderate"
+     ]
+    },
+    {
+     "index": 12,
+     "mile": 600,
+     "lat": 39.10799197158742,
+     "lon": -104.11043114845302,
+     "eta": "2026-11-17T00:50:41Z",
+     "weather": {
+      "wind_mph": 41.8,
+      "gust_mph": 58.5,
+      "rain_in_hr": 0.07,
+      "snow_in_hr": 0,
+      "temp_f": 39.3,
+      "weather_code": 3,
+      "forecast_time": "2026-11-17T01:00:00Z"
+     },
+     "levels": {
+      "wind": 3,
+      "rain": 0,
+      "snow": 0
+     },
+     "level": 3,
+     "level_label": "Severe",
+     "reasons": [
+      "Wind 41.8 mph with 42,000 lb load \u2192 Severe"
+     ]
+    },
+    {
+     "index": 13,
+     "mile": 650,
+     "lat": 39.600246851251505,
+     "lon": -104.79645377739318,
+     "eta": "2026-11-17T11:42:24Z",
+     "weather": null,
+     "levels": null,
+     "level": null,
+     "level_label": "Unknown",
+     "reasons": [
+      "Weather is unavailable at this checkpoint's ETA."
+     ]
+    },
+    {
+     "index": 14,
+     "mile": 664.088597590074,
+     "lat": 39.7392,
+     "lon": -104.9903,
+     "eta": "2026-11-17T11:56:59Z",
+     "weather": null,
+     "levels": null,
+     "level": null,
+     "level_label": "Unknown",
+     "reasons": [
+      "Weather is unavailable at this checkpoint's ETA."
+     ]
+    }
+   ],
+   "rank": 3,
+   "recommended": false
+  }
+ ]
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { heatmapFillColor, heatmapFillOpacity } from "./heatmap";
 import { segmentRoute } from "./routeSegments";
+import { etaHourIndex } from "./time";
 import type { RouteOption } from "../api/types";
 
 describe("heatmap paint", () => {
@@ -51,5 +52,19 @@ describe("route segments", () => {
     const segments = segmentRoute(route);
     expect(segments.map((segment) => segment.level)).toEqual([0, 4, 0]);
     expect(segments.every((segment) => segment.coordinates.length >= 2)).toBe(true);
+  });
+});
+
+describe("checkpoint to frame alignment", () => {
+  const start = "2026-11-16T14:00:00Z";
+  it("picks the hour the backend read the checkpoint weather from", () => {
+    expect(etaHourIndex(start, "2026-11-16T14:00:00Z")).toBe(0);
+    expect(etaHourIndex(start, "2026-11-16T14:29:59Z")).toBe(0);
+    // Nearest-hour wind (ties later) and the closing precipitation hour both resolve to 15:00.
+    expect(etaHourIndex(start, "2026-11-16T14:30:00Z")).toBe(1);
+    expect(etaHourIndex(start, "2026-11-16T14:59:00Z")).toBe(1);
+    expect(etaHourIndex(start, "2026-11-18T14:00:00Z")).toBe(48);
+    expect(etaHourIndex(start, "2026-11-18T14:30:00Z")).toBe(-1);
+    expect(etaHourIndex(start, "2026-11-16T13:00:00Z")).toBe(-1);
   });
 });

@@ -47,7 +47,13 @@ within −1 hour/+14 days, integer cargo weight 0–80,000 lb, interval 10/25/50
 Validation/parsing errors have `error.code=validation_error` and `error.fields` (400).
 Routing/geocode provider failures have `error.code=upstream_error` (502), without
 credential-bearing request URLs or provider bodies. Unknown/expired plans return 404.
+Every error, including unknown `/api/*` paths (404 `not_found`) and unexpected crashes (500
+`internal_error`), uses the same `{"error":{"code","message","fields?"}}` envelope. `fields` is
+DRF's shape: field → list of messages, nested for `origin`/`destination`. Timestamps are
+whole-second UTC (`…Z`).
 Weather failures are recoverable: affected data is `null` and planning includes warnings.
+A heatmap built while any forecast batch failed is returned but not cached, so a retry
+refetches instead of pinning an empty map for six hours.
 
 `planner/services/` separates pure risk, sampling, HOS and scoring from provider adapters.
 `routing.py` exposes a small `RoutingProvider` protocol. `planner.py` deduplicates weather
@@ -111,7 +117,10 @@ uv export --frozen --no-dev --no-emit-project --format requirements-txt --output
 
 See [docs/verification.md](docs/verification.md) for official API documentation checked,
 actual check results and the outstanding conflict in the independently owned spec suite.
-Tests mock HTTP with `responses`; no test calls real providers. Tests under `tests/spec/`
+Tests mock HTTP with `responses`; no test calls real providers.
+`tests/test_frontend_contract.py` pins the real plan/heatmap payloads the frontend tests load
+(`frontend/src/mocks/backend-*.sample.json`); after an API change run
+`WRITE_SAMPLES=1 uv run pytest -q tests/test_frontend_contract.py` and commit the samples. Tests under `tests/spec/`
 are independently maintained and have not been edited by this backend implementation.
 
 ## Render

@@ -14,6 +14,8 @@
   --ink: #14211b;
   --muted: #3e5248;
   --line: #c3cfc7;
+  /* Control outlines: >= 3:1 on panel and canvas (WCAG 1.4.11). --line stays for separators. */
+  --edge: #697b71;
   --accent: #f0b429;
   --accent-ink: #5c3d00;
   --low: #127a45;
@@ -38,6 +40,7 @@
   --ink: #e7f2ec;
   --muted: #b7c9bf;
   --line: #2c3b34;
+  --edge: #7f948a;
   --accent: #f0b429;
   --accent-ink: #2a1c00;
   --danger-text: #ffb4ae;
@@ -118,7 +121,7 @@ button { min-height: 44px; min-width: 44px; }
   line-height: 1.3;
 }
 .mast button, .timeline button, .error-note button, .checkpoint-dialog button {
-  border: 1px solid var(--line);
+  border: 1px solid var(--edge);
   background: var(--panel);
   padding: 0.45rem 0.8rem;
   cursor: pointer;
@@ -162,7 +165,7 @@ button { min-height: 44px; min-width: 44px; }
 .trip-summary p { margin: 0; font-weight: 650; line-height: 1.35; }
 .trip-summary button {
   flex: none;
-  border: 1px solid var(--line);
+  border: 1px solid var(--edge);
   background: var(--canvas);
   padding: 0.35rem 0.7rem;
   cursor: pointer;
@@ -268,7 +271,7 @@ input[type="range"] {
 .field input, .suffix-field input {
   width: 100%;
   min-height: 44px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--edge);
   background: var(--canvas);
   padding: 0.4rem 0.6rem;
 }
@@ -281,7 +284,7 @@ input[type="range"] {
   list-style: none;
   margin: 0;
   padding: 0.25rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--edge);
   background: var(--panel);
   box-shadow: var(--shadow);
 }
@@ -299,7 +302,7 @@ input[type="range"] {
 .segment { border: 0; margin: 0 0 0.75rem; padding: 0; }
 .segment-row { display: flex; gap: 0.35rem; flex-wrap: wrap; }
 .segment-row button {
-  border: 1px solid var(--line);
+  border: 1px solid var(--edge);
   background: var(--canvas);
   padding: 0.45rem 0.8rem;
   cursor: pointer;
@@ -311,7 +314,7 @@ input[type="range"] {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  border: 1px solid var(--line);
+  border: 1px solid var(--edge);
   background: var(--canvas);
   padding: 0.45rem 0.7rem;
   margin-bottom: 0.35rem;
@@ -410,7 +413,7 @@ input[type="range"] {
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--edge);
   background: var(--panel);
   padding: 0.45rem 0.6rem;
   cursor: pointer;

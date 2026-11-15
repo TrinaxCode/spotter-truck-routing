@@ -270,3 +270,49 @@ def test_geocode_api_maps_real_provider_fields_and_uses_cache(settings, no_netwo
                                             "lat": 32.77, "lon": -96.79}]}
     assert client.get("/api/geocode?q=Dallas").json() == response.json()
     assert len(no_network.calls) == 1
+
+
+def test_unknown_api_path_and_crashes_use_the_json_error_envelope(monkeypatch):
+    client = APIClient(raise_request_exception=False)
+    missing = client.get("/api/nope")
+    assert missing.status_code == 404
+    assert missing.json()["error"]["code"] == "not_found"
+
+    def boom(_data):
+        raise RuntimeError("secret internals")
+
+    monkeypatch.setattr("planner.views.create_plan", boom)
+    crashed = client.post("/api/routes/plan", REQUEST, format="json")
+    assert crashed.status_code == 500
+    assert crashed.json()["error"]["code"] == "internal_error"
+    assert "secret internals" not in crashed.content.decode()
+
+
+@freeze_time("2026-11-15T14:00:00Z")
+def test_heatmap_with_a_weather_outage_is_not_cached(settings, no_network, fixture_json):
+    settings.TOMTOM_API_KEY = "test-key"
+    no_network.get(ROUTING, json=fixture_json("tomtom_routes.json"))
+    no_network.add_callback(responses.GET, WEATHER, weather_callback)
+    client = APIClient()
+    plan = client.post("/api/routes/plan", REQUEST, format="json").json()
+    cache.clear()  # forget cached forecasts so the heatmap must call the provider
+    cache.set(f"plan:{plan['plan_id']}", plan, 3600)
+    no_network.remove(responses.GET, WEATHER)
+    no_network.get(WEATHER, status=503)
+    degraded = client.get("/api/heatmap", {"plan_id": plan["plan_id"]})
+    assert degraded.status_code == 200
+    assert all(value is None for row in degraded.json()["risk"] for value in row)
+    no_network.remove(responses.GET, WEATHER)
+    no_network.add_callback(responses.GET, WEATHER, weather_callback)
+    recovered = client.get("/api/heatmap", {"plan_id": plan["plan_id"]}).json()
+    assert any(value is not None for row in recovered["risk"] for value in row)
+
+
+@pytest.mark.parametrize("origin,allowed", [("https://app.example.com", True),
+                                            ("https://evil.example.com", False)])
+def test_cors_follows_configured_origins(settings, origin, allowed):
+    settings.CORS_ALLOWED_ORIGINS = ["https://app.example.com"]
+    response = APIClient().options("/api/routes/plan", HTTP_ORIGIN=origin,
+                                   HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
+                                   HTTP_ACCESS_CONTROL_REQUEST_HEADERS="content-type")
+    assert ("access-control-allow-origin" in response.headers) is allowed

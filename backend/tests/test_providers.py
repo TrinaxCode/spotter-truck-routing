@@ -219,3 +219,15 @@ def test_routing_timeout_is_sanitized(settings, no_network):
     with pytest.raises(UpstreamError) as error:
         TomTomProvider().calculate_routes((0, 0), (1, 1), DEPARTURE, 0)
     assert "secret-test-key" not in str(error.value)
+
+
+def test_past_departure_is_sent_to_tomtom_as_now():
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from planner.services.routing import depart_at
+
+    now = timezone.now()
+    assert depart_at(now - timedelta(minutes=30)) == "now"
+    assert depart_at(now + timedelta(hours=2)).endswith("Z")

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { HeatVariable } from "../api/types";
 import { forecastTicks, formatFrameLabel } from "../lib/format";
+import { onRadioKeyDown } from "../lib/radio";
 
 const VARIABLES: { id: HeatVariable; label: string }[] = [
   { id: "risk", label: "Risk" },
@@ -86,6 +87,11 @@ export function HeatmapBar({ startIso, status, error, onRetry, onFrame }: Heatma
           </button>
         )}
       </div>
+      <span className="sr-only" role="status">
+        {status === "loading" && "Loading corridor forecast"}
+        {status === "error" && (error || "The forecast did not load.")}
+        {status === "ready" && "Corridor forecast ready"}
+      </span>
       <div className="timeline-controls">
         <button
           type="button"
@@ -97,13 +103,19 @@ export function HeatmapBar({ startIso, status, error, onRetry, onFrame }: Heatma
           <HeatIcon />
         </button>
         <div role="radiogroup" aria-label="Forecast variable" className="segment-row">
-          {VARIABLES.map((item) => (
+          {VARIABLES.map((item, index) => (
             <button
               key={item.id}
               type="button"
               role="radio"
               aria-checked={variable === item.id}
+              tabIndex={variable === item.id ? 0 : -1}
               onClick={() => push(hourRef.current, item.id, visibleRef.current)}
+              onKeyDown={(event) =>
+                onRadioKeyDown(event, index, VARIABLES.length, (next) =>
+                  push(hourRef.current, VARIABLES[next].id, visibleRef.current),
+                )
+              }
             >
               {item.label}
             </button>
@@ -115,7 +127,11 @@ export function HeatmapBar({ startIso, status, error, onRetry, onFrame }: Heatma
           aria-pressed={playing}
           aria-label={playing ? "Pause forecast" : "Play forecast"}
           disabled={!ready || reduceMotion}
-          onClick={() => setPlaying((current) => !current)}
+          onClick={() => {
+            // Pressing play on the last frame starts over instead of stopping at once.
+            if (!playing && hourRef.current >= 48) push(0, variableRef.current, visibleRef.current);
+            setPlaying((current) => !current);
+          }}
         >
           {playing ? <PauseIcon /> : <PlayIcon />}
         </button>

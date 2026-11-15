@@ -7,6 +7,7 @@ from typing import Protocol
 
 from django.conf import settings
 from django.core.cache import cache
+from django.utils import timezone
 
 from planner.exceptions import NotConfigured, UpstreamError
 
@@ -79,6 +80,11 @@ def parse_route(raw: dict) -> Route:
     return Route(coords, distance, seconds, tuple(offsets))
 
 
+def depart_at(departure: datetime) -> str:
+    """TomTom rejects past departures; a just-passed departure is routed as "now"."""
+    return utc_iso(departure) if departure > timezone.now() else "now"
+
+
 class TomTomProvider:
     def calculate_routes(
         self, origin: Coord, destination: Coord, departure: datetime, load_lbs: int,
@@ -87,11 +93,12 @@ class TomTomProvider:
         if not settings.TOMTOM_API_KEY:
             raise NotConfigured()
         points = (origin, via, destination) if via else (origin, destination)
-        locations = ":".join(f"{lat:g},{lon:g}" for lon, lat in points)
+        # `:g` keeps 6 significant digits, which truncates longitudes west of -100 to ~100 m.
+        locations = ":".join(f"{lat:.6f},{lon:.6f}" for lon, lat in points)
         payload = get_json(f"https://api.tomtom.com/routing/1/calculateRoute/{locations}/json", {
             "key": settings.TOMTOM_API_KEY, "travelMode": "truck", "vehicleCommercial": "true",
             "vehicleWeight": round((load_lbs + settings.TRUCK_TARE_LBS) * .45359237),
-            "maxAlternatives": max_alternatives, "departAt": utc_iso(departure),
+            "maxAlternatives": max_alternatives, "departAt": depart_at(departure),
             "routeRepresentation": "polyline", "instructionsType": "coded",
         })
         try:

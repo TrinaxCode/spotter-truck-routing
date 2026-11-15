@@ -48,13 +48,15 @@ export function MapSkeleton() {
   );
 }
 
-export function ErrorNote({ message, onRetry }: { message: string; onRetry: () => void }) {
+export function ErrorNote({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div className="error-note" role="alert">
       <p>{message}</p>
-      <button type="button" onClick={onRetry}>
-        Retry
-      </button>
+      {onRetry && (
+        <button type="button" onClick={onRetry}>
+          Retry
+        </button>
+      )}
     </div>
   );
 }

@@ -2,9 +2,11 @@ import { useState } from "react";
 import type { GeoPoint } from "../api/types";
 import { draftIsValid, validateDraft, type FieldErrors, type TripDraft } from "../lib/form";
 import { parseLoadLbs } from "../lib/format";
+import { onRadioKeyDown } from "../lib/radio";
 import { nextFullHourInput } from "../lib/time";
 import { PlaceCombobox } from "./PlaceCombobox";
 
+const INTERVALS = [10, 25, 50] as const;
 const DEFAULT_ORIGIN: GeoPoint = { lat: 32.7767, lon: -96.797, label: "Dallas, TX, USA" };
 const DEFAULT_DESTINATION: GeoPoint = { lat: 39.7392, lon: -104.9903, label: "Denver, CO, USA" };
 
@@ -115,24 +117,17 @@ export function PlanForm({ busy, serverErrors, onPlan, search }: PlanFormProps) 
       <fieldset className="segment">
         <legend>Checkpoint spacing</legend>
         <div role="radiogroup" aria-label="Checkpoint spacing" className="segment-row">
-          {([10, 25, 50] as const).map((miles) => (
+          {INTERVALS.map((miles, index) => (
             <button
               key={miles}
               type="button"
               role="radio"
               aria-checked={draft.interval === miles}
+              tabIndex={draft.interval === miles ? 0 : -1}
               onClick={() => patch({ interval: miles })}
-              onKeyDown={(event) => {
-                const order = [10, 25, 50] as const;
-                const index = order.indexOf(draft.interval);
-                if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-                  event.preventDefault();
-                  patch({ interval: order[(index + 1) % order.length] });
-                } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-                  event.preventDefault();
-                  patch({ interval: order[(index + order.length - 1) % order.length] });
-                }
-              }}
+              onKeyDown={(event) =>
+                onRadioKeyDown(event, index, INTERVALS.length, (next) => patch({ interval: INTERVALS[next] }))
+              }
             >
               {miles} mi
             </button>

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { ApiError } from "./api/errors";
+import { ApiError, describeApiError, flattenFieldErrors, isRetryable, type FieldIssues } from "./api/errors";
 import { api } from "./api/client";
 import type { Checkpoint, HeatmapResponse, HeatVariable, PlanResponse, RouteOption } from "./api/types";
 import { CheckpointDialog } from "./components/CheckpointDialog";
@@ -17,13 +17,13 @@ const MapCanvas = lazy(() => import("./map/MapCanvas").then((module) => ({ defau
 type PlanStatus = "empty" | "loading" | "ready" | "error";
 type HeatStatus = "idle" | "loading" | "ready" | "error";
 
-function fieldErrors(fields?: Record<string, string>): FieldErrors {
-  if (!fields) return {};
+function fieldErrors(issues?: FieldIssues): FieldErrors {
+  const fields = flattenFieldErrors(issues);
   return {
     origin: fields.origin,
     destination: fields.destination,
     departure: fields.departure,
-    load: fields.load_lbs ?? fields.load,
+    load: fields.load_lbs,
   };
 }
 
@@ -46,6 +46,7 @@ export function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [status, setStatus] = useState<PlanStatus>("empty");
   const [planError, setPlanError] = useState("");
+  const [planRetryable, setPlanRetryable] = useState(true);
   const [serverErrors, setServerErrors] = useState<FieldErrors>({});
   const [heatStatus, setHeatStatus] = useState<HeatStatus>("idle");
   const [heatError, setHeatError] = useState("");
@@ -100,7 +101,7 @@ export function App() {
       if (error instanceof DOMException && error.name === "AbortError") return;
       setHeatStart(null);
       setHeatStatus("error");
-      setHeatError(error instanceof ApiError ? error.message : "The forecast did not load.");
+      setHeatError(describeApiError(error, "The forecast did not load."));
     }
   }, []);
 
@@ -111,6 +112,7 @@ export function App() {
     draftRef.current = draft;
     setStatus("loading");
     setPlanError("");
+    setPlanRetryable(true);
     setServerErrors({});
     setInspect(null);
     setHeatStatus("idle");
@@ -129,18 +131,27 @@ export function App() {
     } catch (error) {
       if (controller.signal.aborted || (error instanceof DOMException && error.name === "AbortError")) return;
       setStatus("error");
-      if (error instanceof ApiError) {
-        setPlanError(error.message);
-        setServerErrors(fieldErrors(error.fields));
-      } else {
-        setPlanError("The dispatch service could not be reached.");
-      }
+      setPlanError(describeApiError(error, "The dispatch service could not be reached."));
+      setPlanRetryable(isRetryable(error));
+      setServerErrors(fieldErrors(error instanceof ApiError ? error.fields : undefined));
     }
   }
 
+  // Swapping the form for the results (or back) removes the focused control; hand focus on.
   useEffect(() => {
-    if (status !== "ready" || editing) return;
+    if (status !== "ready") return;
+    const active = document.activeElement;
+    const lost = !active || active === document.body || active.closest("[hidden]") !== null;
+    if (editing) {
+      if (lost) document.getElementById("origin")?.focus();
+      return;
+    }
     document.getElementById("trip-panel-body")?.scrollTo(0, 0);
+    if (lost) {
+      document.querySelector<HTMLElement>('#trip-panel-body [data-selected="true"] .route-main')?.focus({
+        preventScroll: true,
+      });
+    }
   }, [status, editing, plan?.plan_id]);
 
   const selectRoute = useCallback((routeId: string) => {
@@ -176,6 +187,13 @@ export function App() {
           </button>
         </div>
       </header>
+      <p className="sr-only" role="status">
+        {status === "ready" && plan
+          ? `${plan.routes.length} routes scored. Top pick: ${
+              plan.routes.find((route) => route.recommended)?.label ?? "none"
+            }.`
+          : ""}
+      </p>
       <div className="stage">
         <TripSheet>
           {submitted && status === "ready" && !editing && (
@@ -196,9 +214,13 @@ export function App() {
           {status === "error" && (
             <ErrorNote
               message={planError}
-              onRetry={() => {
-                if (draftRef.current) void run(draftRef.current);
-              }}
+              onRetry={
+                planRetryable
+                  ? () => {
+                      if (draftRef.current) void run(draftRef.current);
+                    }
+                  : undefined
+              }
             />
           )}
           {plan && status === "ready" && (

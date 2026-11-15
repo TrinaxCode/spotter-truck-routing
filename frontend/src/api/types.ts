@@ -1,4 +1,5 @@
 /** SPEC §7 contract. Timestamps in responses are ISO-8601 UTC with a Z suffix. */
+import type { FieldIssues } from "./errors";
 
 export interface GeoPoint {
   lat: number;
@@ -23,11 +24,12 @@ export interface GeocodeResponse {
   results: GeoPoint[];
 }
 
+/** `fields` follows DRF: field -> message list, or a nested object for origin/destination. */
 export interface ErrorEnvelope {
   error: {
     code: string;
     message: string;
-    fields?: Record<string, string>;
+    fields?: FieldIssues;
   };
 }
 

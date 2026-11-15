@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { ApiError } from "../api/errors";
 import type { GeoPoint } from "../api/types";
 import { HeatmapBar } from "./HeatmapBar";
 import { PlanForm } from "./PlanForm";
@@ -154,5 +155,67 @@ describe("HeatmapBar", () => {
     expect(onFrame).toHaveBeenCalledWith(4, "risk", true);
     await user.click(screen.getByRole("radio", { name: "Wind" }));
     expect(onFrame).toHaveBeenCalledWith(4, "wind", true);
+  });
+});
+
+describe("keyboard and async behaviour", () => {
+  it("moves selection and focus together with the arrow keys and uses a roving tab stop", async () => {
+    const user = userEvent.setup();
+    render(<PlanForm busy={false} search={search} onPlan={vi.fn()} />);
+    const radios = screen.getAllByRole("radio", { name: /mi$/ });
+    expect(radios.map((radio) => radio.tabIndex)).toEqual([-1, 0, -1]);
+    radios[1].focus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("radio", { name: "50 mi" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "50 mi" })).toHaveFocus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("radio", { name: "10 mi" })).toHaveFocus();
+  });
+
+  it("does not reopen the list when a slower request answers after a choice", async () => {
+    const user = userEvent.setup();
+    let release: (places: GeoPoint[]) => void = () => undefined;
+    const slow = vi.fn(
+      (query: string) =>
+        new Promise<GeoPoint[]>((resolve) => {
+          release = resolve;
+          void query;
+        }),
+    );
+    const onChange = vi.fn();
+    render(<PlaceCombobox id="origin" label="Origin" value={null} onChange={onChange} search={slow} />);
+    const input = screen.getByRole("combobox", { name: "Origin" });
+    await user.type(input, "Ama");
+    await vi.waitFor(() => expect(slow).toHaveBeenCalled());
+    // Backspacing below three letters must clear the "Searching" state of the aborted request.
+    await user.clear(input);
+    expect(screen.queryByText("Searching…")).toBeNull();
+    release([{ label: "Amarillo, TX, USA", lat: 35.2, lon: -101.8 }]);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(input).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("tells the user when address search is unavailable", async () => {
+    const user = userEvent.setup();
+    const broken = vi.fn(async (): Promise<GeoPoint[]> => {
+      throw new ApiError(503, "not_configured", "Set TOMTOM_API_KEY");
+    });
+    render(<PlaceCombobox id="origin" label="Origin" value={null} onChange={vi.fn()} search={broken} />);
+    await user.type(screen.getByRole("combobox", { name: "Origin" }), "Dal");
+    expect(await screen.findByText(/not available yet/i)).toBeInTheDocument();
+  });
+
+  it("steps through variables with arrow keys and restarts playback from the last frame", async () => {
+    const user = userEvent.setup();
+    const onFrame = vi.fn();
+    render(<HeatmapBar startIso="2026-11-16T14:00:00Z" status="ready" onRetry={vi.fn()} onFrame={onFrame} />);
+    screen.getByRole("radio", { name: "Risk" }).focus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("radio", { name: "Wind" })).toHaveFocus();
+    expect(onFrame).toHaveBeenLastCalledWith(0, "wind", true);
+    fireEvent.change(screen.getByRole("slider", { name: /Forecast hour/ }), { target: { value: "48" } });
+    await user.click(screen.getByRole("button", { name: "Play forecast" }));
+    expect(onFrame).toHaveBeenLastCalledWith(0, "wind", true);
+    expect(screen.getByRole("button", { name: "Pause forecast" })).toBeInTheDocument();
   });
 });
