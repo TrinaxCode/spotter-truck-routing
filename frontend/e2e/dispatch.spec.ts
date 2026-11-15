@@ -197,3 +197,86 @@ for (const size of [
     await expect.poll(violation, { timeout: 5_000 }).toBe("");
   });
 }
+
+for (const size of [
+  { width: 375, height: 812 },
+  { width: 375, height: 667 },
+]) {
+  test(`the checkpoint card and its close button stay inside the viewport on a ${size.width}x${size.height} phone`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(size);
+    await page.goto("/");
+    await page.getByRole("button", { name: "Plan routes" }).click();
+    await expect(page.getByText("Recommended")).toBeVisible();
+    await expect(page.getByTestId("heatmap-slider")).toBeEnabled();
+
+    // Planning settles the sheet on its half snap; open it fully to reach the checkpoint list.
+    const sheet = page.locator("#trip-panel");
+    await expect(sheet).toHaveAttribute("data-snap", "half");
+    await page.getByRole("button", { name: /trip panel/ }).click();
+    await expect(sheet).toHaveAttribute("data-snap", "expanded");
+
+    const selected = page.getByTestId("route-card").filter({ has: page.getByRole("button", { pressed: true }) });
+    await selected.getByText(/Checkpoints/).click();
+    await selected.getByTestId("checkpoint-button").first().click();
+
+    const dialog = page.getByTestId("checkpoint-dialog");
+    await expect(dialog).toBeVisible();
+    const close = dialog.getByRole("button", { name: "Close" });
+    await expect(close).toBeFocused();
+    // The card sits above the dock, and the mast stays clear of it.
+    await expect
+      .poll(async () => {
+        const box = await dialog.boundingBox();
+        const closeBox = await close.boundingBox();
+        const dock = await page.locator(".dock").boundingBox();
+        if (!box || !closeBox || !dock) return "missing";
+        if (box.x < -1 || box.y < 56 || box.x + box.width > size.width + 1) return `dialog out of bounds ${JSON.stringify(box)}`;
+        if (box.y + box.height > dock.y + 1) return `dialog overlaps the dock ${JSON.stringify(box)}`;
+        if (closeBox.y < 0 || closeBox.y + closeBox.height > size.height) return `close out of bounds ${JSON.stringify(closeBox)}`;
+        return "";
+      })
+      .toBe("");
+    await page.screenshot({ path: `test-results/checkpoint-${size.width}x${size.height}.png` });
+    await close.click();
+    await expect(dialog).toBeHidden();
+  });
+}
+
+const STYLE_URLS = "https://tiles.openfreemap.org/styles/**";
+
+test("a basemap that fails to load shows a map error with Retry, and Retry recovers", async ({ page }) => {
+  await page.route(STYLE_URLS, (route) => route.abort());
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  const error = page.getByTestId("map-error");
+  await expect(error).toBeVisible({ timeout: 15_000 });
+  await expect(error).toContainText(/map did not load/i);
+  // The planner still works while the map is down.
+  await expect(page.getByRole("button", { name: "Plan routes" })).toBeEnabled();
+
+  // The network comes back (a minimal style keeps the test independent of the real host).
+  await page.unroute(STYLE_URLS);
+  await page.route(STYLE_URLS, (route) =>
+    route.fulfill({ json: { version: 8, name: "stub", sources: {}, layers: [] } }),
+  );
+  await error.getByRole("button", { name: "Retry map" }).click();
+  await expect(error).toBeHidden();
+  await expect(page.getByTestId("map-canvas").locator("canvas").first()).toBeVisible();
+
+  // A plan made now reaches the new map.
+  await page.getByRole("button", { name: "Plan routes" }).click();
+  await expect(page.getByText("Recommended")).toBeVisible();
+  await expect
+    .poll(async () => page.evaluate(() => window.__spotter?.sourceUpdates ?? 0), { timeout: 20_000 })
+    .toBeGreaterThan(0);
+});
+
+test("isolated tile failures do not take the map down", async ({ page }) => {
+  await page.route("https://tiles.openfreemap.org/planet/**", (route) => route.abort());
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await planTrip(page);
+  await expect(page.getByTestId("map-canvas").locator("canvas").first()).toBeVisible();
+  await expect(page.getByTestId("map-error")).toHaveCount(0);
+});

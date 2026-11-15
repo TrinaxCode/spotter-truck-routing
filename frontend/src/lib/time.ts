@@ -1,3 +1,5 @@
+import type { HeatVariable } from "../api/types";
+
 export function nextFullHourInput(now = new Date()): string {
   const date = new Date(now);
   date.setMinutes(0, 0, 0);
@@ -48,15 +50,29 @@ export function floorHourIso(iso: string): string {
 }
 
 /**
- * Heatmap frame whose data a checkpoint's weather is closest to. The backend reads wind from the
- * nearest hour (ties later) and rain/snow from the hour that closes the ETA, so rounding, not
- * flooring, picks the frame that agrees with the checkpoint. -1 when outside the frames.
+ * Heatmap frame whose data a checkpoint's weather is read from, per forecast variable. This
+ * mirrors the backend (`planner/services/weather.py`):
+ * - Wind is instantaneous: the nearest hour, ties later (14:20 -> 14:00 frame, 14:30 -> 15:00).
+ * - Rain and snow are sums over the hour that ends at the frame, so the frame is the hour closing
+ *   the ETA (ceil: 14:20 -> 15:00 frame, whose window is 14:00-15:00).
+ * - Risk blends both. It follows the precipitation rule: a checkpoint is lit in the frame whose
+ *   hour window (t - 1 h, t] contains its ETA, which is the same frame the rain and snow
+ *   readings come from. Wind has no window, so a Risk frame can differ from the Wind frame by
+ *   one hour, as it does in the backend's combined level.
+ * Returns -1 when the frame falls outside 0..hours-1 or an input is not a valid time.
  */
-export function etaHourIndex(startIso: string, etaIso: string, hours = 49): number {
+export function etaHourIndex(
+  startIso: string,
+  etaIso: string,
+  variable: HeatVariable = "wind",
+  hours = 49,
+): number {
   const start = Date.parse(startIso);
   const eta = Date.parse(etaIso);
   if (Number.isNaN(start) || Number.isNaN(eta)) return -1;
-  const index = Math.round((eta - start) / 3_600_000);
+  const elapsed = (eta - start) / 3_600_000;
+  // `+ 0` keeps a ceil of -0.3 from becoming -0.
+  const index = (variable === "wind" ? Math.round(elapsed) : Math.ceil(elapsed)) + 0;
   if (index < 0 || index >= hours) return -1;
   return index;
 }

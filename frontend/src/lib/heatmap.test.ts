@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { heatmapFillColor, heatmapFillOpacity } from "./heatmap";
+import { heatmapCoverage, heatmapFillColor, heatmapFillOpacity } from "./heatmap";
 import { segmentRoute } from "./routeSegments";
 import { etaHourIndex } from "./time";
-import type { RouteOption } from "../api/types";
+import type { HeatmapResponse, RouteOption } from "../api/types";
 
 describe("heatmap paint", () => {
   it("bakes the hour index into the expression", () => {
@@ -68,5 +68,76 @@ describe("checkpoint to frame alignment", () => {
     expect(etaHourIndex(start, "2026-11-18T14:00:00Z")).toBe(48);
     expect(etaHourIndex(start, "2026-11-18T14:30:00Z")).toBe(-1);
     expect(etaHourIndex(start, "2026-11-16T13:00:00Z")).toBe(-1);
+  });
+});
+
+describe("variable-aware checkpoint frames", () => {
+  const start = "2026-11-16T14:00:00Z";
+  const eta = "2026-11-16T14:20:00Z";
+
+  it("reads wind from the nearest hour for a 14:20 ETA", () => {
+    expect(etaHourIndex(start, eta, "wind")).toBe(0);
+    expect(etaHourIndex(start, eta)).toBe(0);
+  });
+
+  it("reads rain and snow from the hour that closes the ETA", () => {
+    expect(etaHourIndex(start, eta, "rain")).toBe(1);
+    expect(etaHourIndex(start, eta, "snow")).toBe(1);
+  });
+
+  it("lights a checkpoint under Risk in the frame whose hour window contains the ETA", () => {
+    // Frame 1 (15:00) covers 14:00-15:00, which contains 14:20; frame 0 covers 13:00-14:00.
+    expect(etaHourIndex(start, eta, "risk")).toBe(1);
+  });
+
+  it("keeps hour boundaries in the frame that ends there and clamps to the 49 frames", () => {
+    expect(etaHourIndex(start, "2026-11-16T14:00:00Z", "rain")).toBe(0);
+    expect(etaHourIndex(start, "2026-11-16T15:00:00Z", "rain")).toBe(1);
+    expect(etaHourIndex(start, "2026-11-16T14:30:00Z", "wind")).toBe(1);
+    expect(etaHourIndex(start, "2026-11-18T14:00:00Z", "rain")).toBe(48);
+    expect(etaHourIndex(start, "2026-11-18T14:20:00Z", "rain")).toBe(-1);
+    expect(etaHourIndex(start, "2026-11-18T14:20:00Z", "wind")).toBe(48);
+    expect(etaHourIndex(start, "2026-11-16T13:00:00Z", "rain")).toBe(-1);
+    expect(etaHourIndex(start, "not a time", "rain")).toBe(-1);
+  });
+});
+
+describe("heatmap coverage", () => {
+  function heat(overrides: Partial<Pick<HeatmapResponse, "risk" | "wind" | "rain" | "snow">>): HeatmapResponse {
+    const empty = [[null, null], [null, null]];
+    return {
+      plan_id: "p",
+      start: "2026-11-16T14:00:00Z",
+      hours: 2,
+      cell_deg: 0.5,
+      load_lbs: 30000,
+      cells: [
+        { lat: 1, lon: 1 },
+        { lat: 2, lon: 2 },
+      ],
+      risk: empty,
+      wind: empty,
+      rain: empty,
+      snow: empty,
+      ...overrides,
+    };
+  }
+
+  it("is none when no cell has a value in any hour", () => {
+    expect(heatmapCoverage(heat({}))).toEqual({ risk: "none", wind: "none", rain: "none", snow: "none" });
+  });
+
+  it("is none when there are no cells", () => {
+    expect(heatmapCoverage({ ...heat({}), cells: [], risk: [], wind: [], rain: [], snow: [] }).risk).toBe("none");
+  });
+
+  it("is partial with some nulls and full with none", () => {
+    const result = heatmapCoverage(
+      heat({
+        risk: [[0, null], [1, 2]],
+        wind: [[10, 12], [8, 9]],
+      }),
+    );
+    expect(result).toEqual({ risk: "partial", wind: "full", rain: "none", snow: "none" });
   });
 });

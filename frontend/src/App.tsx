@@ -9,6 +9,7 @@ import { RouteList } from "./components/RouteList";
 import { EmptyState, ErrorNote, MapSkeleton, RouteSkeleton } from "./components/States";
 import { TripSheet } from "./components/TripSheet";
 import { TripSummary } from "./components/TripSummary";
+import { heatmapCoverage, type HeatCoverage } from "./lib/heatmap";
 import { draftToRequest, type FieldErrors, type TripDraft } from "./lib/form";
 import { shortPlace } from "./lib/format";
 import type { MapHandle } from "./map/handle";
@@ -52,6 +53,7 @@ export function App() {
   const [heatStatus, setHeatStatus] = useState<HeatStatus>("idle");
   const [heatError, setHeatError] = useState("");
   const [heatStart, setHeatStart] = useState<string | null>(null);
+  const [heatCoverage, setHeatCoverage] = useState<Record<HeatVariable, HeatCoverage> | null>(null);
   const [inspect, setInspect] = useState<{ route: RouteOption; checkpoint: Checkpoint } | null>(null);
   const [submitted, setSubmitted] = useState<TripDraft | null>(null);
   const [pending, setPending] = useState<TripDraft | null>(null);
@@ -96,12 +98,14 @@ export function App() {
     try {
       const heat = await api.fetchHeatmap(planId, abortRef.current?.signal);
       setHeatStart(heat.start);
+      setHeatCoverage(heatmapCoverage(heat));
       setHeatStatus("ready");
       queued.current.heat = heat;
       mapRef.current?.setHeatmap(heat);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       setHeatStart(null);
+      setHeatCoverage(null);
       setHeatStatus("error");
       setHeatError(describeApiError(error, "The forecast did not load."));
     }
@@ -120,6 +124,7 @@ export function App() {
     setInspect(null);
     setHeatStatus("idle");
     setHeatStart(null);
+    setHeatCoverage(null);
     try {
       const next = await api.planRoutes(draftToRequest(draft), controller.signal);
       if (controller.signal.aborted) return;
@@ -245,7 +250,11 @@ export function App() {
         </div>
       </header>
       <div ref={dockRef} className="dock">
-        <TripSheet title={title} settleKey={status === "ready" ? plan?.plan_id : null}>
+        <TripSheet
+          title={title}
+          settleKey={status === "ready" ? plan?.plan_id : null}
+          lowerKey={inspect ? `${inspect.route.id}:${inspect.checkpoint.index}` : null}
+        >
           {status === "empty" && <EmptyState />}
           {submitted && status === "ready" && !editing && (
             <TripSummary draft={submitted} onEdit={() => setEditing(true)} />
@@ -290,6 +299,8 @@ export function App() {
         <HeatmapBar
           key={heatStart ?? "idle"}
           startIso={heatStart}
+          departureIso={plan?.routes[0]?.departure ?? null}
+          coverage={heatCoverage}
           status={heatStatus}
           error={heatError}
           onRetry={() => {

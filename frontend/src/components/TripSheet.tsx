@@ -32,18 +32,29 @@ interface TripSheetProps {
   title: string;
   /** Changes when new results arrive; phones then settle on the half snap so the map is visible. */
   settleKey?: string | null;
+  /**
+   * Changes while a checkpoint card is open. An expanded phone sheet then drops to the half snap
+   * so the card, which floats above the dock, still has room inside the viewport.
+   */
+  lowerKey?: string | null;
   children: ReactNode;
 }
 
 /** Floating card on desktop and tablet; a bottom sheet with three snaps (tap, swipe or key) on phones. */
-export function TripSheet({ title, settleKey, children }: TripSheetProps) {
+export function TripSheet({ title, settleKey, lowerKey, children }: TripSheetProps) {
   const [snap, setSnap] = useState<Snap>(initialSnap);
   const [seenKey, setSeenKey] = useState(settleKey ?? null);
+  const [seenLower, setSeenLower] = useState(lowerKey ?? null);
   const press = useRef<{ y: number; dragged: boolean } | null>(null);
   const swallowClick = useRef(false);
   if ((settleKey ?? null) !== seenKey) {
     setSeenKey(settleKey ?? null);
     if (settleKey && isPhone()) setSnap("half");
+  }
+
+  if ((lowerKey ?? null) !== seenLower) {
+    setSeenLower(lowerKey ?? null);
+    if (lowerKey && isPhone() && snap === "expanded") setSnap("half");
   }
 
   function shift(direction: 1 | -1) {

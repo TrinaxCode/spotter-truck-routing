@@ -41,6 +41,10 @@ The map module is loaded with `React.lazy` after the shell. `MapCanvas` does not
 
 Each corridor cell is one GeoJSON polygon. The 49 hourly values live on the feature as `risk`, `wind`, `rain`, and `snow` arrays. The hour is a literal index in an `at` expression (`['at', hour, ['get', variable]]`). Sliding does not call `setData`, does not fetch again, and does not re-render the map component. In dev, `window.__spotter` counts `sourceUpdates`, `paintUpdates`, `mapRenders`, and `frame` so the Playwright test can check that.
 
+Timeline labels are relative to the real departure, not the floored forecast hour: with a 5:20 departure frame 0 reads "20 min before departure" and frame 1 "+40 min from departure". The checkpoint highlight on the selected route follows the variable (`etaHourIndex` in `src/lib/time.ts`, mirroring `planner/services/weather.py`): Wind lights the checkpoint in the nearest hour (ties later), Rain and Snow in the hour that closes the ETA, and Risk uses the precipitation rule, the frame whose hour window contains the ETA (a 14:20 ETA lights the 14:00 frame under Wind and the 15:00 frame under Rain, Snow and Risk). Only the paint expression changes with the frame.
+
+A forecast response whose values are all null for the active variable is shown as a failed load with Retry (`heatmapCoverage` in `src/lib/heatmap.ts`); some nulls show "Forecast unavailable for part of the corridor". If the basemap style cannot load (blocked or offline) `MapCanvas` shows a map error with Retry instead of a blank surface; later tile, sprite and glyph errors are ignored.
+
 Basemap: OpenFreeMap Dark by default and OpenFreeMap Positron in the light theme. The theme is dark unless the system asks for light or the driver picked one with the toggle (`localStorage` key `headwind-theme`). Changing theme calls `setStyle` and restores sources. That path is not the slider path.
 
 ## Design

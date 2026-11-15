@@ -217,3 +217,32 @@ export function corridorFeatures(data: HeatmapResponse): CorridorFeatureCollecti
     })),
   };
 }
+
+export type HeatCoverage = "full" | "partial" | "none";
+
+function variableCoverage(rows: (number | null)[][]): HeatCoverage {
+  let known = 0;
+  let missing = 0;
+  for (const row of rows) {
+    for (const value of row) {
+      if (value == null) missing += 1;
+      else known += 1;
+    }
+  }
+  if (known === 0) return "none";
+  return missing > 0 ? "partial" : "full";
+}
+
+/**
+ * How much of each variable's grid carries data. A 200 whose values are all null (cells exist,
+ * no forecast) is "none" and must be handled as an error, not as a ready, empty map; some nulls
+ * (hours or cells past the forecast) are "partial".
+ */
+export function heatmapCoverage(data: HeatmapResponse): Record<HeatVariable, HeatCoverage> {
+  return {
+    risk: variableCoverage(data.risk),
+    wind: variableCoverage(data.wind),
+    rain: variableCoverage(data.rain),
+    snow: variableCoverage(data.snow),
+  };
+}

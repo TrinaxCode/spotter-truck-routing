@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useRef } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { MapHandle } from "./handle";
 import { createMapController, noteMapRender } from "./mapController";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -14,6 +14,9 @@ export const MapCanvas = memo(function MapCanvas({ onReady, onInspect, onSelect 
   const readyRef = useRef(onReady);
   const inspectRef = useRef(onInspect);
   const selectRef = useRef(onSelect);
+  /** Bumped by Retry; each value builds a fresh map and App replays the plan onto it via onReady. */
+  const [attempt, setAttempt] = useState(0);
+  const [failure, setFailure] = useState<string | null>(null);
   useLayoutEffect(() => {
     readyRef.current = onReady;
     inspectRef.current = onInspect;
@@ -26,25 +29,47 @@ export const MapCanvas = memo(function MapCanvas({ onReady, onInspect, onSelect 
     if (!node) return;
     const theme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
     let handle: MapHandle | null = null;
+    let cancelled = false;
+    const fail = (reason: string) => {
+      if (!cancelled) setFailure(reason);
+    };
     try {
       handle = createMapController(node, {
         theme,
         onReady: (next) => readyRef.current(next),
         onInspect: (routeId, index) => inspectRef.current(routeId, index),
         onSelect: (routeId) => selectRef.current(routeId),
+        onStyleError: fail,
       });
     } catch (error) {
       console.error(error);
-      node.dataset.mapError = "1";
+      queueMicrotask(() => fail("The map could not start."));
     }
-    return () => handle?.destroy();
-  }, []);
+    return () => {
+      cancelled = true;
+      handle?.destroy();
+    };
+  }, [attempt]);
 
   return (
-    <div ref={nodeRef} className="map-canvas" data-testid="map-canvas">
-      <p className="map-fallback" data-map-error>
-        The map could not start. Route details in the panel still work.
-      </p>
-    </div>
+    <>
+      <div ref={nodeRef} className="map-canvas" data-testid="map-canvas" />
+      {failure !== null && (
+        <div className="map-error" role="alert" data-testid="map-error">
+          <p className="map-error-title">The map did not load</p>
+          <p>Route details in the panel still work. Check your connection, then try again.</p>
+          <button
+            type="button"
+            className="text-btn"
+            onClick={() => {
+              setFailure(null);
+              setAttempt((count) => count + 1);
+            }}
+          >
+            Retry map
+          </button>
+        </div>
+      )}
+    </>
   );
 });

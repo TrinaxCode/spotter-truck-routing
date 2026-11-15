@@ -8,7 +8,7 @@ import { corridorFeatures, heatmapFillColor, heatmapFillOpacity, type PaintExpr 
 import { formatInchesPerHour, formatMiles, formatShortClock, formatSpeedMph, formatTempF } from "../lib/format";
 import { NEUTRAL_ROUTE_COLOR, riskColor } from "../lib/riskColor";
 import { segmentRoute } from "../lib/routeSegments";
-import { etaHourIndex } from "../lib/time";
+import { etaHourIndex, floorHourIso } from "../lib/time";
 import type { MapHandle } from "./handle";
 
 export type { MapHandle } from "./handle";
@@ -54,6 +54,8 @@ export interface MapControllerOptions {
   onReady: (handle: MapHandle) => void;
   onInspect: (routeId: string, index: number) => void;
   onSelect: (routeId: string) => void;
+  /** The basemap style could not be loaded (network, blocked host). The map surface is unusable. */
+  onStyleError: (message: string) => void;
 }
 
 interface CheckpointHit {
@@ -129,6 +131,9 @@ export function createMapController(container: HTMLElement, options: MapControll
 
   let alive = true;
   let styled = false;
+  /** True from creation (and from each basemap switch) until `style.load`. */
+  let loadingStyle = true;
+  let styleFailed = false;
   let booted = false;
   let plan: PlanResponse | null = null;
   let autoFramed: PlanResponse | null = null;
@@ -175,6 +180,15 @@ export function createMapController(container: HTMLElement, options: MapControll
 
   map.on("error", (event) => {
     const message = event.error?.message ?? "";
+    // Before the style is in, no source or layer exists, so an error is the style itself failing
+    // (sprite and glyph fetches are the exception: the map still works without them). After the
+    // style loads, tile, sprite and glyph errors are isolated and the map keeps working.
+    const ancillary = /sprite|glyph|font/i.test(`${message} ${(event.error as { url?: string } | undefined)?.url ?? ""}`);
+    if (loadingStyle && !styleFailed && alive && !ancillary) {
+      styleFailed = true;
+      options.onStyleError(message || "The basemap style did not load.");
+      return;
+    }
     if (/ajax|tile|sprite|glyph|fetch|Failed to load/i.test(message)) return;
     console.warn(message);
   });
@@ -375,9 +389,13 @@ export function createMapController(container: HTMLElement, options: MapControll
     });
   }
 
-  /** Checkpoints whose ETA lands in the slider hour. The layer filter already limits this to the selected route. */
+  /**
+   * Checkpoints whose weather comes from the slider frame, per variable: nearest hour for Wind,
+   * the hour closing the ETA for Rain, Snow and Risk (see etaHourIndex). The layer filter already
+   * limits this to the selected route. Only the paint expression changes with the frame.
+   */
   function inSelectedHour(): PaintExpr {
-    return ["==", ["get", "hour"], hour];
+    return ["==", ["get", variable === "wind" ? "hourWind" : "hourPrecip"], hour];
   }
 
   function paintCheckpoints(): void {
@@ -517,6 +535,13 @@ export function createMapController(container: HTMLElement, options: MapControll
     return { type: "FeatureCollection", features };
   }
 
+  /** Heatmap frame 0: the forecast's own start, or the departure hour (floored) until it loads. */
+  function frameStart(): string | null {
+    if (heat) return heat.start;
+    const departure = plan?.routes[0]?.departure;
+    return departure ? floorHourIso(departure) : null;
+  }
+
   function checkpointCollection(next: PlanResponse, startIso: string | null): GeoJSON.FeatureCollection {
     hits.clear();
     const features: GeoJSON.Feature[] = [];
@@ -535,7 +560,9 @@ export function createMapController(container: HTMLElement, options: MapControll
           properties: {
             routeId: route.id,
             index: checkpoint.index,
-            hour: startIso ? etaHourIndex(startIso, checkpoint.eta) : -1,
+            // The frame each variable reads this checkpoint from; see etaHourIndex.
+            hourWind: startIso ? etaHourIndex(startIso, checkpoint.eta, "wind") : -1,
+            hourPrecip: startIso ? etaHourIndex(startIso, checkpoint.eta, "rain") : -1,
             color: riskColor(checkpoint.level),
             level: checkpoint.level ?? -1,
             mile: formatMiles(checkpoint.mile),
@@ -688,7 +715,7 @@ export function createMapController(container: HTMLElement, options: MapControll
     if (!plan || !styled) return;
     writeSource(ROUTE_SOURCE, routeCollection(plan));
     writeSource(SEGMENT_SOURCE, segmentCollection(plan));
-    writeSource(CHECKPOINT_SOURCE, checkpointCollection(plan, heat?.start ?? plan.routes[0]?.departure ?? null));
+    writeSource(CHECKPOINT_SOURCE, checkpointCollection(plan, frameStart()));
     syncMarkers(plan);
     applySelection();
     fit(plan);
@@ -698,7 +725,7 @@ export function createMapController(container: HTMLElement, options: MapControll
     if (!styled) return;
     writeSource(CORRIDOR_SOURCE, heat ? corridorFeatures(heat) : EMPTY);
     if (plan) {
-      writeSource(CHECKPOINT_SOURCE, checkpointCollection(plan, heat?.start ?? plan.routes[0]?.departure ?? null));
+      writeSource(CHECKPOINT_SOURCE, checkpointCollection(plan, frameStart()));
     }
     // New data fades in from clear instead of popping on.
     gain = 0;
@@ -710,7 +737,7 @@ export function createMapController(container: HTMLElement, options: MapControll
     if (plan) {
       writeSource(ROUTE_SOURCE, routeCollection(plan));
       writeSource(SEGMENT_SOURCE, segmentCollection(plan));
-      writeSource(CHECKPOINT_SOURCE, checkpointCollection(plan, heat?.start ?? plan.routes[0]?.departure ?? null));
+      writeSource(CHECKPOINT_SOURCE, checkpointCollection(plan, frameStart()));
       syncMarkers(plan);
       applySelection();
     }
@@ -727,6 +754,7 @@ export function createMapController(container: HTMLElement, options: MapControll
   map.on("style.load", () => {
     if (!alive) return;
     styled = true;
+    loadingStyle = false;
     map.dragRotate.disable();
     map.touchZoomRotate.disableRotation();
     if (!map.getLayer("corridor")) restore();
@@ -854,6 +882,7 @@ export function createMapController(container: HTMLElement, options: MapControll
     },
     setBasemap(nextTheme) {
       theme = nextTheme === "dark" ? "dark" : "light";
+      loadingStyle = true;
       map.setStyle(STYLES[theme]);
     },
     showCheckpoint(routeId, index) {
@@ -875,6 +904,7 @@ export function createMapController(container: HTMLElement, options: MapControll
       cancelAnimationFrame(fadeFrame);
       cancelAnimationFrame(layoutFrame);
       resize.disconnect();
+      tip.remove();
       for (const marker of markers) marker.remove();
       map.remove();
     },

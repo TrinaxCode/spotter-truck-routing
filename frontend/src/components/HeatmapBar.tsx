@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { HeatVariable } from "../api/types";
 import { forecastTicks, formatFrameOffset, formatFrameTime } from "../lib/format";
+import type { HeatCoverage } from "../lib/heatmap";
 import { onRadioKeyDown } from "../lib/radio";
 import { Legend } from "./States";
 
@@ -12,14 +13,19 @@ const VARIABLES: { id: HeatVariable; label: string }[] = [
 ];
 
 interface HeatmapBarProps {
+  /** Heatmap frame 0 (the departure hour, floored). */
   startIso: string | null;
+  /** The real departure, so frame labels read relative to it. */
+  departureIso?: string | null;
+  /** Which variables carry data; "none" for the active one is shown as a recoverable error. */
+  coverage?: Record<HeatVariable, HeatCoverage> | null;
   status: "idle" | "loading" | "ready" | "error";
   error?: string;
   onRetry: () => void;
   onFrame: (hour: number, variable: HeatVariable, visible: boolean) => void;
 }
 
-export function HeatmapBar({ startIso, status, error, onRetry, onFrame }: HeatmapBarProps) {
+export function HeatmapBar({ startIso, departureIso, coverage, status, error, onRetry, onFrame }: HeatmapBarProps) {
   const [hour, setHour] = useState(0);
   const [variable, setVariable] = useState<HeatVariable>("risk");
   const [visible, setVisible] = useState(true);
@@ -74,15 +80,25 @@ export function HeatmapBar({ startIso, status, error, onRetry, onFrame }: Heatma
     hourRef.current = nextHour;
     variableRef.current = nextVariable;
     visibleRef.current = nextVisible;
+    // Playing through a variable that has no data would animate nothing.
+    if (coverage?.[nextVariable] === "none") setPlaying(false);
     setHour(nextHour);
     setVariable(nextVariable);
     setVisible(nextVisible);
     onFrame(nextHour, nextVariable, nextVisible);
   }
 
-  const ready = status === "ready" && !!startIso;
+  // A 200 with no values for the active variable is not "ready": the map would stay blank with no
+  // way forward, so it reads as a failed load and offers the same Retry.
+  const gap = status === "ready" ? (coverage?.[variable] ?? "full") : "full";
+  const empty = gap === "none";
+  const shown = empty ? "error" : status;
+  const problem = empty
+    ? `No ${VARIABLES.find((item) => item.id === variable)?.label ?? "forecast"} values came back for this corridor.`
+    : error || "The forecast did not load.";
+  const ready = status === "ready" && !!startIso && !empty;
   const time = startIso ? formatFrameTime(startIso, hour) : "";
-  const offset = formatFrameOffset(hour);
+  const offset = formatFrameOffset(hour, startIso, departureIso);
   const label = `${time}, ${offset}`;
   const ticks = startIso ? forecastTicks(startIso) : [];
   const style = { "--p": hour / 48 } as CSSProperties;
@@ -90,7 +106,7 @@ export function HeatmapBar({ startIso, status, error, onRetry, onFrame }: Heatma
   return (
     <div ref={wrapRef} className="time-wrap" data-map-overlay="" data-overlay-edge="bottom">
       <Legend variable={variable} visible={visible} />
-      <section className="timeline" aria-label="Corridor forecast" aria-busy={status === "loading"} data-state={status}>
+      <section className="timeline" aria-label="Corridor forecast" aria-busy={status === "loading"} data-state={shown}>
         <button
           type="button"
           className="play"
@@ -106,10 +122,11 @@ export function HeatmapBar({ startIso, status, error, onRetry, onFrame }: Heatma
           {playing ? <PauseIcon /> : <PlayIcon />}
         </button>
         <div className="clock" data-testid="forecast-clock">
-          {status === "ready" && (
+          {shown === "ready" && (
             <>
               <p className="clock-time">{time}</p>
               <p className="clock-offset">{reduceMotion ? `${offset}. Use the arrow keys to step.` : offset}</p>
+              {gap === "partial" && <p className="clock-warn">Forecast unavailable for part of the corridor</p>}
             </>
           )}
           {status === "loading" && (
@@ -124,10 +141,10 @@ export function HeatmapBar({ startIso, status, error, onRetry, onFrame }: Heatma
               <p className="clock-offset">Plan a trip to load wind, rain and snow along the route.</p>
             </>
           )}
-          {status === "error" && (
+          {shown === "error" && (
             <>
               <p className="clock-time clock-quiet">Forecast unavailable</p>
-              <p className="clock-offset">{error || "The forecast did not load."}</p>
+              <p className="clock-offset">{problem}</p>
             </>
           )}
         </div>
@@ -151,7 +168,7 @@ export function HeatmapBar({ startIso, status, error, onRetry, onFrame }: Heatma
               </button>
             ))}
           </div>
-          {status === "error" ? (
+          {shown === "error" ? (
             <button type="button" className="text-btn" onClick={onRetry}>
               Retry forecast
             </button>
@@ -170,8 +187,9 @@ export function HeatmapBar({ startIso, status, error, onRetry, onFrame }: Heatma
         </div>
         <span className="sr-only" role="status">
           {status === "loading" && "Loading corridor forecast"}
-          {status === "error" && (error || "The forecast did not load.")}
-          {status === "ready" && "Corridor forecast ready"}
+          {shown === "error" && problem}
+          {shown === "ready" && "Corridor forecast ready"}
+          {shown === "ready" && gap === "partial" && ". Forecast unavailable for part of the corridor."}
         </span>
         <div className="slider" style={style}>
           <input

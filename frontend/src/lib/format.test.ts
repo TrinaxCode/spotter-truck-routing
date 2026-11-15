@@ -4,6 +4,7 @@ import {
   formatAvgRisk,
   formatDuration,
   formatFrameLabel,
+  formatFrameOffset,
   formatHosBreaks,
   formatLoadLbs,
   formatMiles,
@@ -52,6 +53,31 @@ describe("format", () => {
     expect(ticks.map((tick) => tick.hour)).toEqual([0, 6, 12, 18, 24, 30, 36, 42, 48]);
     expect(ticks[0]?.day).toBeTruthy();
     expect(ticks.filter((tick) => tick.day).length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("forecast frame offsets", () => {
+  const start = "2026-11-16T14:00:00Z";
+  it("reads from the departure hour when the departure is on the hour", () => {
+    expect(formatFrameOffset(0, start, "2026-11-16T14:00:00Z")).toBe("At departure");
+    expect(formatFrameOffset(1, start, "2026-11-16T14:00:00Z")).toBe("+1 h from departure");
+    expect(formatFrameOffset(18, start, "2026-11-16T14:00:00Z")).toBe("+18 h from departure");
+  });
+
+  it("is relative to the real departure, not the floored hour", () => {
+    // Frame 0 is the 14:00 hour, 20 min before a 14:20 departure.
+    const departure = "2026-11-16T14:20:00Z";
+    expect(formatFrameOffset(0, start, departure)).toBe("20 min before departure");
+    expect(formatFrameOffset(1, start, departure)).toBe("+40 min from departure");
+    expect(formatFrameOffset(2, start, departure)).toBe("+1 h 40 min from departure");
+    expect(formatFrameOffset(3, start, "2026-11-16T14:30:00Z")).toBe("+2 h 30 min from departure");
+    expect(formatFrameOffset(5, start, "2026-11-16T14:40:00Z")).toBe("+4 h 20 min from departure");
+  });
+
+  it("falls back to whole hours without the times", () => {
+    expect(formatFrameOffset(0)).toBe("At departure");
+    expect(formatFrameOffset(5)).toBe("+5 h from departure");
+    expect(formatFrameOffset(2, start, null)).toBe("+2 h from departure");
   });
 });
 

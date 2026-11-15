@@ -198,18 +198,40 @@ h2 {
     var(--bg);
   color: var(--muted);
 }
-.map-fallback {
-  display: none;
-}
-.map-canvas[data-map-error="1"] .map-fallback {
-  display: block;
+/* Basemap style failed to load: the same blank grid as the skeleton, with a way forward. */
+.map-error {
   position: absolute;
-  inset: 5rem 1rem auto;
-  z-index: 2;
-  background: var(--surface-solid);
-  padding: 1rem;
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow);
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 96px 24px 0;
+  text-align: center;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 63px, var(--sk-1) 63px 64px),
+    repeating-linear-gradient(0deg, transparent 0 63px, var(--sk-1) 63px 64px),
+    var(--bg);
+  color: var(--muted);
+}
+.map-error-title {
+  color: var(--ink);
+  font-size: var(--fs-md);
+  font-weight: 650;
+}
+.map-error p {
+  max-width: 34ch;
+}
+.map-error .text-btn {
+  min-height: 44px;
+  min-width: 44px;
+  margin-top: 4px;
+}
+@media (min-width: 768px) {
+  .map-error {
+    padding-top: 22vh;
+  }
 }
 
 .mast,
@@ -436,6 +458,14 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.clock-warn {
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  color: var(--moderate);
+}
+:root[data-theme="light"] .clock-warn {
+  color: #8a6400;
 }
 .tools {
   grid-area: tools;
@@ -1450,6 +1480,9 @@ h2 {
   top: 132px;
   right: var(--gutter);
   width: min(320px, calc(100vw - var(--gutter) * 2));
+  /* Short windows scroll the card instead of pushing it off screen. */
+  max-height: calc(100dvh - 132px - var(--gutter));
+  overflow: auto;
   padding: 14px 14px 12px 16px;
   border-radius: var(--radius-panel);
   background: var(--surface-solid);
@@ -1734,7 +1767,8 @@ h2 {
     right: 8px;
     bottom: calc(var(--dock-h, 220px) + 8px);
     width: auto;
-    max-height: 40dvh;
+    /* Never taller than the room between the header bar (8 + 48 px) and the dock; scrolls inside. */
+    max-height: min(40dvh, calc(100dvh - var(--dock-h, 220px) - 8px - 64px - 8px));
     overflow: auto;
   }
   .map-stage .maplibregl-ctrl-top-right .maplibregl-ctrl {

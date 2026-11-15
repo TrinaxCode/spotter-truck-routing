@@ -89,9 +89,31 @@ export function formatFrameTime(startIso: string, hour: number): string {
   return frameClock.format(date).replace(",", "");
 }
 
-/** "At departure" or "+18 h from departure". */
-export function formatFrameOffset(hour: number): string {
-  return hour === 0 ? "At departure" : `+${hour} h from departure`;
+/** "20 min", "2 h" or "1 h 40 min" for a whole number of minutes (> 0). */
+function spanLabel(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${rest} min`;
+  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+}
+
+/**
+ * Where a forecast frame sits relative to the real departure. Frames are whole hours from the
+ * departure hour (floored), so with a 5:20 departure frame 0 is 5:00: "20 min before departure",
+ * frame 1 is "+40 min from departure". With an on-the-hour departure this reads "At departure",
+ * "+1 h from departure", ... Without the start and departure times it falls back to the plain
+ * frame number.
+ */
+export function formatFrameOffset(hour: number, startIso?: string | null, departureIso?: string | null): string {
+  const start = startIso ? Date.parse(startIso) : Number.NaN;
+  const departure = departureIso ? Date.parse(departureIso) : Number.NaN;
+  const minutes =
+    Number.isNaN(start) || Number.isNaN(departure)
+      ? hour * 60
+      : Math.round((start + hour * 3_600_000 - departure) / 60_000);
+  if (minutes === 0) return "At departure";
+  if (minutes < 0) return `${spanLabel(-minutes)} before departure`;
+  return `+${spanLabel(minutes)} from departure`;
 }
 
 const shortClock = new Intl.DateTimeFormat("en-US", {
