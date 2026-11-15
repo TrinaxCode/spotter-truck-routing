@@ -203,3 +203,32 @@ def score_route(route_id: str, owned: Sequence[float], levels: Sequence[RiskLeve
 def rank_routes(scores: Sequence[RouteScore]) -> list[RouteScore]   # best first
 def explain(ranked: Sequence[RouteScore]) -> list[str]
 ```
+
+## 12. Extensions (deepen the core decision, no unrelated features)
+
+### 12.1 Departure options — "Best time to leave"
+`GET /api/departure-options?plan_id=<id>` → re-scores the plan's routes for departures shifted by `offset_h ∈ {0,1,…,24}` from the plan's departure.
+- **No new routing calls**: route geometry, checkpoints, drive times and HOS schedule are reused (HOS depends only on drive time, so each checkpoint ETA shifts by exactly the offset). Assumption documented: traffic-dependent drive time at a later hour is not re-queried.
+- Weather comes from the same cached Open-Meteo forecasts (`fetch_forecasts` on the plan's checkpoint coordinates; normally all cache hits). Same `select_weather`, `assess`, `owned_miles`, `score_route`, `rank_routes` as the plan — no duplicated rules.
+- Response:
+```json
+{
+  "plan_id": "…", "base_departure": "…Z",
+  "options": [{
+    "offset_h": 0, "departure": "…Z", "best_route_id": "r1",
+    "routes": [{"route_id": "r1", "miles_by_level": {"low":…,"moderate":…,"high":…,"severe":…,"no_travel":…,"unknown":…},
+                "avg_risk": 0.12, "max_level": 2, "weather_coverage": 1.0, "total_time_s": 81000, "arrival": "…Z"}]
+  }],
+  "suggestion": {"offset_h": 3, "departure": "…Z", "route_id": "r2",
+                 "headline": "Leave 3 h later on Route B to avoid 42 mi of Severe weather.",
+                 "improvement": {"no_travel_mi": 0, "severe_mi": 42.0, "high_mi": 10.5}} 
+}
+```
+- `suggestion` = the option whose best route has the lowest **risk key** (coverage-complete first, no_travel, severe, high, avg_risk — same rounding as §6, *without* total time), earliest offset on ties. It is `null` unless that risk key is strictly better than offset 0's best route. `headline` names the largest improvement (No Travel > Severe > High > average risk).
+- Options whose departure would exceed the forecast horizon simply get `null` levels / coverage < 1 (never treated as Low). `404` for unknown plan. Cached with the plan TTL.
+
+### 12.2 Weather profile (frontend only)
+Per selected route: SVG chart over route miles — risk band (owned miles coloured by level), sustained wind line (mph), precipitation bars (rain + snow in/hr), HOS break markers, ETA labels at a few ticks. Hover/focus a mile → highlight the nearest checkpoint on the map (feature-state / paint only). Keyboard accessible (arrow keys move the cursor), with a text summary for screen readers.
+
+### 12.3 Trip playback (frontend only)
+Play animates a truck marker along the selected route by wall-clock time (position interpolated from checkpoint `eta` / `mile` and the geometry, paused during HOS breaks), synchronised with the heatmap hour (frame = truck time, clamped to 0–48 h). The truck lives in its own tiny GeoJSON source (1 feature) — the only source updated per animation frame; the heatmap still changes via paint only. Speed control (e.g. 1 h of trip per second), respects `prefers-reduced-motion` (step mode), keyboard accessible.
