@@ -2,26 +2,33 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       name="description"
-      content="Spotter dispatch console. Compare truck routes by wind, rain, and snow risk."
+      content="Headwind compares truck routes by wind, rain and snow risk, hour by hour along the corridor."
     />
-    <title>Spotter — Dispatch</title>
+    <meta name="color-scheme" content="dark light" />
+    <title>Headwind — Weather-aware truck routing</title>
     <script>
+      // Dark first; the light theme follows prefers-color-scheme unless the driver picked one.
       try {
-        var stored = localStorage.getItem("spotter-theme");
+        var stored = localStorage.getItem("headwind-theme");
         var theme =
           stored === "light" || stored === "dark"
             ? stored
-            : matchMedia("(prefers-color-scheme: dark)").matches
-              ? "dark"
-              : "light";
+            : matchMedia("(prefers-color-scheme: light)").matches
+              ? "light"
+              : "dark";
         document.documentElement.dataset.theme = theme;
       } catch (e) {
-        document.documentElement.dataset.theme = "light";
+        document.documentElement.dataset.theme = "dark";
       }
     </script>
+    <style>
+      /* Paint the first frame in the right theme before the stylesheet arrives. */
+      html[data-theme="dark"] { background: #0b1017; color-scheme: dark; }
+      html[data-theme="light"] { background: #e9edf2; color-scheme: light; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

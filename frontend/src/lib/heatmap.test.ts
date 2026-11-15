@@ -12,7 +12,9 @@ describe("heatmap paint", () => {
     expect(JSON.stringify(hour3)).toContain('["at",3,["get","risk"]]');
     expect(JSON.stringify(heatmapFillColor("wind", 12))).toContain('["at",12,["get","wind"]]');
     expect(heatmapFillOpacity("rain", 4, false)).toBe(0);
-    expect(heatmapFillOpacity("snow", 1, true)).toEqual(["case", ["==", ["at", 1, ["get", "snow"]], null], 0, 0.4]);
+    // Opacity follows the value too, and still indexes the hour literally.
+    expect(JSON.stringify(heatmapFillOpacity("snow", 1, true))).toContain('["at",1,["get","snow"]]');
+    expect(heatmapFillOpacity("snow", 1, true, 0)).toBe(0);
   });
 });
 

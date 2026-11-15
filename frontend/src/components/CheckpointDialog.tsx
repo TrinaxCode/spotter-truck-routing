@@ -13,6 +13,7 @@ export function CheckpointDialog({ route, checkpoint, onClose }: CheckpointDialo
   const closeRef = useRef<HTMLButtonElement>(null);
   const previous = useRef<HTMLElement | null>(null);
   const weather = checkpoint.weather;
+  const label = checkpoint.level_label || riskLabel(checkpoint.level);
 
   useEffect(() => {
     previous.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -27,6 +28,16 @@ export function CheckpointDialog({ route, checkpoint, onClose }: CheckpointDialo
     };
   }, [onClose, checkpoint.index, route.id]);
 
+  const readings = weather
+    ? [
+        { name: "Wind", value: formatSpeedMph(weather.wind_mph) },
+        { name: "Gust", value: formatSpeedMph(weather.gust_mph) },
+        { name: "Rain", value: formatInchesPerHour(weather.rain_in_hr) },
+        { name: "Snow", value: formatInchesPerHour(weather.snow_in_hr) },
+        { name: "Temp", value: formatTempF(weather.temp_f) },
+      ]
+    : [];
+
   return (
     <div
       className="checkpoint-dialog"
@@ -36,42 +47,33 @@ export function CheckpointDialog({ route, checkpoint, onClose }: CheckpointDialo
       data-testid="checkpoint-dialog"
     >
       <div className="dialog-head">
-        <h2 id="checkpoint-title">
-          {route.label}, {formatMiles(checkpoint.mile)}
-        </h2>
-        <button ref={closeRef} type="button" onClick={onClose}>
-          Close
+        <div>
+          <h2 id="checkpoint-title">
+            {route.label}, {formatMiles(checkpoint.mile)}
+          </h2>
+          <p className="dialog-eta">ETA {formatClock(checkpoint.eta)}</p>
+        </div>
+        <span className="pill" data-level={checkpoint.level ?? "unknown"}>
+          <span className="sr-only">Level: </span>
+          {label}
+        </span>
+        <button ref={closeRef} type="button" className="close-btn" aria-label="Close" onClick={onClose}>
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="m3.5 3.5 9 9m0-9-9 9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
         </button>
       </div>
-      <p>ETA {formatClock(checkpoint.eta)}</p>
-      <p className="level-line">
-        Level: {checkpoint.level_label || riskLabel(checkpoint.level)}
-      </p>
       {weather ? (
         <dl className="wx">
-          <div>
-            <dt>Wind</dt>
-            <dd>{formatSpeedMph(weather.wind_mph)}</dd>
-          </div>
-          <div>
-            <dt>Gust</dt>
-            <dd>{formatSpeedMph(weather.gust_mph)}</dd>
-          </div>
-          <div>
-            <dt>Rain</dt>
-            <dd>{formatInchesPerHour(weather.rain_in_hr)}</dd>
-          </div>
-          <div>
-            <dt>Snow</dt>
-            <dd>{formatInchesPerHour(weather.snow_in_hr)}</dd>
-          </div>
-          <div>
-            <dt>Temp</dt>
-            <dd>{formatTempF(weather.temp_f)}</dd>
-          </div>
+          {readings.map((reading) => (
+            <div key={reading.name}>
+              <dt>{reading.name}</dt>
+              <dd>{reading.value}</dd>
+            </div>
+          ))}
         </dl>
       ) : (
-        <p>Weather is missing for this checkpoint. It is excluded from the average.</p>
+        <p className="dialog-note">Weather is missing for this checkpoint. It is excluded from the average.</p>
       )}
       {checkpoint.reasons.length > 0 ? (
         <ul className="reasons">
@@ -80,7 +82,7 @@ export function CheckpointDialog({ route, checkpoint, onClose }: CheckpointDialo
           ))}
         </ul>
       ) : (
-        <p>No elevated risk at this checkpoint.</p>
+        <p className="dialog-note">No elevated risk at this checkpoint.</p>
       )}
     </div>
   );

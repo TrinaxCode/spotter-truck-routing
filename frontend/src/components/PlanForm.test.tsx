@@ -98,7 +98,7 @@ describe("RouteCard", () => {
     expect(screen.getByText("Recommended")).toBeInTheDocument();
     expect(screen.getByText("1 HOS break")).toBeInTheDocument();
     expect(screen.getByText(/Total 1 hr 30 min incl\. breaks/)).toBeInTheDocument();
-    expect(screen.getByText(/Arrive /)).toBeInTheDocument();
+    expect(screen.getByText("Arrival")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /No Travel 25 mi/ })).toBeInTheDocument();
     expect(screen.getByText("Fewer severe miles than Route C.")).toBeInTheDocument();
   });

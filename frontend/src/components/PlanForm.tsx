@@ -54,6 +54,7 @@ export function PlanForm({ busy, serverErrors, onPlan, search }: PlanFormProps) 
         onPlan(draft);
       }}
     >
+      <div className="route-fields">
       <PlaceCombobox
         id="origin"
         label="Origin"
@@ -72,6 +73,7 @@ export function PlanForm({ busy, serverErrors, onPlan, search }: PlanFormProps) 
         onBlur={() => setTouched((current) => ({ ...current, destination: true }))}
         onChange={(destination) => patch({ destination }, "destination")}
       />
+      </div>
       <div className="field">
         <label htmlFor="departure">Departure</label>
         <input
@@ -91,6 +93,7 @@ export function PlanForm({ busy, serverErrors, onPlan, search }: PlanFormProps) 
           <p className="field-hint">Local time. Default is the next full hour.</p>
         )}
       </div>
+      <div className="field-row">
       <div className="field">
         <label htmlFor="load">Load weight</label>
         <div className="suffix-field">
@@ -134,17 +137,22 @@ export function PlanForm({ busy, serverErrors, onPlan, search }: PlanFormProps) 
           ))}
         </div>
       </fieldset>
+      </div>
       <button
         type="button"
         className="switch"
         role="switch"
         aria-checked={draft.hos}
+        aria-labelledby="hos-label"
+        aria-describedby="hos-hint"
         onClick={() => patch({ hos: !draft.hos })}
       >
-        <span>Hours of service</span>
-        <span className="switch-value">{draft.hos ? "On" : "Off"}</span>
+        <span className="switch-text">
+          <span id="hos-label">Hours of service</span>
+          <span id="hos-hint" className="field-hint">30 min break after 8 h driving, 10 h off after 11 h. The 14 h window is not modelled.</span>
+        </span>
+        <span className="switch-track" aria-hidden="true" />
       </button>
-      <p className="field-hint">30 min break after 8 h driving, 10 h off duty after 11 h. The 14 h window is not modelled.</p>
       <button type="submit" className="submit" data-testid="plan-submit" disabled={!draftIsValid(errors) || busy}>
         {busy ? "Planning…" : "Plan routes"}
       </button>

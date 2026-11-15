@@ -1,5 +1,6 @@
 import type { MilesByLevel, PlanResponse, RouteOption } from "../api/types";
-import { formatAvgRisk, formatClock, formatDuration, formatHosBreaks, formatMiles } from "../lib/format";
+import { formatDuration, formatHosBreaks, formatMiles, formatShortClock } from "../lib/format";
+import { describeRecommendation } from "../lib/recommend";
 import { milesByLevelLabel, riskLabel } from "../lib/riskColor";
 
 const MILE_PARTS: { key: keyof MilesByLevel; className: string }[] = [
@@ -20,7 +21,7 @@ export function MilesBar({ miles, label }: { miles: MilesByLevel; label?: string
         <span
           key={part.key}
           className={part.className}
-          style={{ width: `${(miles[part.key] / total) * 100}%` }}
+          style={{ flexGrow: miles[part.key] / total, flexBasis: 0 }}
         />
       ))}
     </div>
@@ -32,12 +33,34 @@ interface RouteListProps {
   selectedId: string;
   onSelect: (routeId: string) => void;
   onInspect: (routeId: string, index: number) => void;
+  onHover?: (routeId: string | null) => void;
 }
 
-export function RouteList({ plan, selectedId, onSelect, onInspect }: RouteListProps) {
+export function RouteList({ plan, selectedId, onSelect, onInspect, onHover }: RouteListProps) {
   const ordered = [...plan.routes].sort((a, b) => a.rank - b.rank);
+  const recommendation = describeRecommendation(plan);
+  const reasons = plan.recommendation.explanation;
   return (
     <section className="routes" aria-label="Route options">
+      {recommendation && (
+        <div className="callout" data-tone={recommendation.caution ? "caution" : "good"}>
+          <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+            <path
+              d={recommendation.caution ? "M10 5.5v5.2M10 13.6v.1" : "m6.3 10.3 2.4 2.4 5-5.4"}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <div>
+            <p className="callout-lead">{recommendation.headline}</p>
+            {reasons.length > 0 && <p className="callout-why">{reasons.join(" ")}</p>}
+          </div>
+        </div>
+      )}
       {plan.warnings.length > 0 && (
         <ul className="warnings">
           {plan.warnings.map((warning) => (
@@ -45,10 +68,8 @@ export function RouteList({ plan, selectedId, onSelect, onInspect }: RouteListPr
           ))}
         </ul>
       )}
-      {plan.recommendation.explanation.length > 0 && (
-        <p className="recommend-lead">{plan.recommendation.explanation.join(" ")}</p>
-      )}
-      <ol>
+      <h2 className="section-title">Routes</h2>
+      <ol onPointerLeave={() => onHover?.(null)}>
         {ordered.map((route) => (
           <RouteCard
             key={route.id}
@@ -57,6 +78,7 @@ export function RouteList({ plan, selectedId, onSelect, onInspect }: RouteListPr
             explanation={[]}
             onSelect={() => onSelect(route.id)}
             onInspect={(index) => onInspect(route.id, index)}
+            onHover={onHover ? (on) => onHover(on ? route.id : null) : undefined}
           />
         ))}
       </ol>
@@ -70,20 +92,36 @@ interface RouteCardProps {
   explanation: string[];
   onSelect: () => void;
   onInspect: (index: number) => void;
+  onHover?: (on: boolean) => void;
 }
 
-export function RouteCard({ route, selected, explanation, onSelect, onInspect }: RouteCardProps) {
+export function RouteCard({ route, selected, explanation, onSelect, onInspect, onHover }: RouteCardProps) {
   const coverage = route.summary.weather_coverage;
-  const milesLabel = milesByLevelLabel(route.summary.miles_by_level);
+  const miles = route.summary.miles_by_level;
+  const milesLabel = milesByLevelLabel(miles);
+  const worst = route.summary.max_level;
+  const exposed = miles.high + miles.severe + miles.no_travel;
   return (
-    <li className="route" data-selected={selected} data-recommended={route.recommended} data-testid="route-card">
+    <li
+      className="route"
+      data-selected={selected}
+      data-recommended={route.recommended}
+      data-testid="route-card"
+      onPointerEnter={onHover ? () => onHover(true) : undefined}
+      onFocus={onHover ? () => onHover(true) : undefined}
+      onBlur={onHover ? () => onHover(false) : undefined}
+    >
       <button type="button" className="route-main" aria-pressed={selected} onClick={onSelect}>
-        <span className="rank" aria-hidden="true">
-          {route.rank}
-        </span>
-        <span className="route-head">
+        <span className="route-top">
+          <span className="rank" aria-hidden="true">
+            {route.rank}
+          </span>
           <span className="route-name">{route.label}</span>
           {route.recommended && <span className="recommend">Recommended</span>}
+          <span className="pill" data-level={worst ?? "unknown"}>
+            <span className="sr-only">Worst level: </span>
+            {riskLabel(worst)}
+          </span>
         </span>
         <span className="sr-only">{`Rank ${route.rank}. ${selected ? "Selected." : "Not selected."}`}</span>
         {explanation.length > 0 && (
@@ -93,16 +131,29 @@ export function RouteCard({ route, selected, explanation, onSelect, onInspect }:
             ))}
           </span>
         )}
-        <span className="stats">
-          <span>{formatMiles(route.distance_mi)}</span>
-          <span>Drive {formatDuration(route.drive_time_s)}</span>
+        <span className="stat-grid">
+          <span className="stat">
+            <span className="stat-label">Distance</span>
+            <span className="stat-value">{formatMiles(route.distance_mi)}</span>
+          </span>
+          <span className="stat">
+            <span className="stat-label">Drive</span>
+            <span className="stat-value">{formatDuration(route.drive_time_s)}</span>
+          </span>
+          <span className="stat">
+            <span className="stat-label">Arrival</span>
+            <span className="stat-value">{formatShortClock(route.arrival)}</span>
+          </span>
+        </span>
+        <span className="route-sub">
           <span>Total {formatDuration(route.total_time_s)} incl. breaks</span>
-          <span>Arrive {formatClock(route.arrival)}</span>
+          <span className="dot" aria-hidden="true" />
           <span>{formatHosBreaks(route.summary.breaks.length)}</span>
         </span>
-        <MilesBar miles={route.summary.miles_by_level} label={milesLabel} />
-        <span className="risk-line">
-          Avg risk {formatAvgRisk(route.summary.avg_risk)} · Max {riskLabel(route.summary.max_level)}
+        <MilesBar miles={miles} label={milesLabel} />
+        <span className="route-risk">
+          <span>Avg risk {route.summary.avg_risk.toFixed(2)}</span>
+          {exposed > 0 && <span>{formatMiles(exposed)} High or worse</span>}
         </span>
         {coverage < 1 && (
           <span className="coverage-line">
@@ -116,8 +167,9 @@ export function RouteCard({ route, selected, explanation, onSelect, onInspect }:
           {route.checkpoints.map((checkpoint) => (
             <li key={checkpoint.index}>
               <button type="button" data-testid="checkpoint-button" onClick={() => onInspect(checkpoint.index)}>
+                <span className="check-dot" data-level={checkpoint.level ?? "unknown"} aria-hidden="true" />
                 <span>Mile {checkpoint.mile.toFixed(1)}</span>
-                <span>{checkpoint.level_label}</span>
+                <span className="check-level">{checkpoint.level_label}</span>
               </button>
             </li>
           ))}
