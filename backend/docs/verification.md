@@ -19,10 +19,9 @@
   Confirmed 16 forecast days, past-day option, rain/showers/snow as preceding-hour
   sums and sustained wind as instantaneous. Gusts are preceding-hour maxima. Confirmed
   commercial `apikey` and `customer-` host prefix. Local mocks verify both payload shapes.
-- [Render Blueprint](https://render.com/docs/blueprint-spec),
-  [Python version selection](https://render.com/docs/python-version) and
-  [persistent disks](https://render.com/docs/disks): verified rootDir, custom Blueprint
-  path, autoDeployTrigger, service disk support and single-instance limitation.
+- [Railway config as code](https://docs.railway.com/reference/config-as-code) and
+  [monorepo root directory](https://docs.railway.com/guides/monorepo): `railway.json` with the
+  Railpack builder, start command, `/api/health` check; the config file path is absolute.
 
 These were documentation checks and mocked integrations, not live authenticated
 provider calls. No live API credentials were used for these verifications.

@@ -21,8 +21,9 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = [v.strip() for v in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
                  if v.strip()]
-if render_hostname := os.getenv("RENDER_EXTERNAL_HOSTNAME"):
-    ALLOWED_HOSTS.append(render_hostname)
+if railway_domain := os.getenv("RAILWAY_PUBLIC_DOMAIN"):
+    # Railway health checks arrive over plain HTTP from this host.
+    ALLOWED_HOSTS += [railway_domain, "healthcheck.railway.app"]
 CORS_ALLOWED_ORIGINS = [v.strip() for v in os.getenv(
     "CORS_ALLOWED_ORIGINS", "http://localhost:5173" if DEBUG else ""
 ).split(",") if v.strip()]
@@ -60,6 +61,7 @@ OPEN_METEO_API_KEY = os.getenv("OPEN_METEO_API_KEY", "")
 # Cargo is specified by the request; routing restrictions require gross vehicle weight.
 TRUCK_TARE_LBS = float(os.getenv("TRUCK_TARE_LBS", "35000"))
 SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", not DEBUG)
+SECURE_REDIRECT_EXEMPT = [r"^api/health$"]
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True

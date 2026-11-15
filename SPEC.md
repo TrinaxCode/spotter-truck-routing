@@ -19,9 +19,9 @@ Evaluation: 40% routes/weather/risk/recommendation logic · 40% UI, map & heatma
 
 ## 2. Stack
 
-- `backend/`: Python 3.12, Django 5.x + Django REST Framework, `requests`, `pytest` + `pytest-django`, `responses` (HTTP mocking), gunicorn, whitenoise, django-cors-headers. Managed with `uv` (`pyproject.toml` + `uv.lock`), plus an exported `requirements.txt` for Render.
+- `backend/`: Python 3.12, Django 5.x + Django REST Framework, `requests`, `pytest` + `pytest-django`, `responses` (HTTP mocking), gunicorn, whitenoise, django-cors-headers. Managed with `uv` (`pyproject.toml` + `uv.lock`), plus an exported `requirements.txt`.
 - `frontend/`: Vite + React 19 + TypeScript strict, MapLibre GL JS, Tailwind CSS v4. Vitest + Testing Library; Playwright for E2E. Basemap: keyless vector style (OpenFreeMap `https://tiles.openfreemap.org/styles/positron` or `.../liberty`; dark variant allowed).
-- Deploy: backend on Render (`render.yaml`), frontend on Vercel (`VITE_API_URL`). Keys only server-side.
+- Deploy: backend on Railway (`backend/railway.json`), frontend on Vercel (`VITE_API_URL`). Keys only server-side.
 
 ## 3. External APIs (decided)
 
@@ -167,7 +167,7 @@ Single page "dispatch console". Desktop: left panel (form → route cards) + map
 - Backend: `pytest` green with boundary tests for every threshold and load rule, recommendation order (each tie-break level), checkpoint spacing (incl. destination), ETA interpolation, HOS, owned-miles, heatmap grid; upstream calls mocked (no network in tests). `ruff` clean.
 - Frontend: `tsc --noEmit`, `eslint`, `vitest`, `vite build` green; Playwright E2E of plan → select route → slide heatmap against mocked API.
 - README: setup, env vars, architecture, every decision above, limitations.
-- Deployed: Render backend + Vercel frontend, verified in a browser at 375/768/1280 px with clean console.
+- Deployed: Railway backend + Vercel frontend, verified in a browser at 375/768/1280 px with clean console.
 
 ## 11. Backend module interface (pure functions — tests import these)
 

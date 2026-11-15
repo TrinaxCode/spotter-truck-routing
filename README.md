@@ -19,7 +19,7 @@ Plan a truck trip, get three route options, and see which one is safest given th
 ```
 frontend/  Vite + React 19 + TypeScript + MapLibre GL (Vercel)
    │  POST /api/routes/plan   GET /api/heatmap?plan_id=   GET /api/geocode?q=
-backend/   Django 5 + DRF (Render)
+backend/   Django 5 + DRF (Railway)
    planner/services/
      risk.py       thresholds + load rules (pure)
      sampling.py   checkpoints, owned miles, simplification (pure)
