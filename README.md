@@ -84,3 +84,6 @@ cd frontend && npm run typecheck && npm run lint && npm run test && npm run buil
 - HOS is simplified: no 14 h duty window, weekly limits or sleeper splits.
 - Weather is sampled on a ~0.1° grid (close to the forecast model's resolution). The heatmap is capped at 300 cells.
 - The file cache is shared by the workers of a single instance; horizontal scaling would need Redis.
+- Route results are cached per departure **hour** (15 min TTL): two departures within the same hour reuse TomTom's geometry and drive times, while every ETA is still computed from the exact departure. Only the traffic pattern used for that hour can differ.
+- Concurrent identical requests on a cold cache can both call the upstream APIs (results stay consistent; there is no cross-worker request coalescing).
+- A cold plan takes ~6–16 s, almost all of it TomTom truck routing with alternatives (e.g. Los Angeles → New York at 10 mi spacing ≈ 16 s for ~880 checkpoints). Cached plans return in under 1 s.
