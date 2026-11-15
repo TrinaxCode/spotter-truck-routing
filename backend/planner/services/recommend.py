@@ -58,8 +58,11 @@ def explain(ranked: Sequence[RouteScore], labels: Mapping[str, str] | None = Non
     comparisons = zip(ranking_key(best)[1:], ranking_key(second)[1:], strict=True)
     for index, (a, b) in enumerate(comparisons):
         if a != b:
-            prefix = "Tied on " + "/".join(criteria[:index]) + "; " if index else ""
+            tied = criteria[:index]
+            joined = ", ".join(tied[:-1]) + " and " + tied[-1] if len(tied) > 1 else "".join(tied)
+            prefix = f"Tied on {joined}; " if index else ""
             values = (f"{format_duration(a)} vs {format_duration(b)}" if index == 4
                       else f"{a:g} vs {b:g}")
-            return [f"{prefix}lower {criteria[index]} ({values}) than {runner_up}."]
+            comparative = "fewer" if index < 3 else "lower"
+            return [f"{prefix}{comparative} {criteria[index]} ({values}) than {runner_up}."]
     return ["All ranking criteria are tied; provider order breaks the tie."]

@@ -21,7 +21,7 @@
  "recommendation": {
   "route_id": "r2",
   "explanation": [
-   "lower No Travel miles (193.4 vs 238) than Route A."
+   "fewer No Travel miles (193.4 vs 238) than Route A."
   ]
  },
  "warnings": [
