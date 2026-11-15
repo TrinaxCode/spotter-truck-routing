@@ -1,5 +1,6 @@
 import type {
   ErrorEnvelope,
+  DepartureOptionsResponse,
   GeocodeResponse,
   HealthResponse,
   HeatmapResponse,
@@ -27,6 +28,7 @@ export interface ApiClient {
   geocode: (query: string, signal?: AbortSignal) => Promise<GeocodeResponse>;
   planRoutes: (body: PlanRequest, signal?: AbortSignal) => Promise<PlanResponse>;
   fetchHeatmap: (planId: string, signal?: AbortSignal) => Promise<HeatmapResponse>;
+  fetchDepartureOptions: (planId: string, signal?: AbortSignal) => Promise<DepartureOptionsResponse>;
 }
 
 function trimBase(url: string): string {
@@ -100,6 +102,15 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       if (useMocks) return (await loadMocks()).mockHeatmap(planId, mockDelayMs, signal);
       const params = new URLSearchParams({ plan_id: planId });
       return request<HeatmapResponse>(`/api/heatmap?${params.toString()}`, { method: "GET" }, signal);
+    },
+    async fetchDepartureOptions(planId, signal) {
+      if (useMocks) return (await loadMocks()).mockDepartureOptions(planId, mockDelayMs, signal);
+      const params = new URLSearchParams({ plan_id: planId });
+      return request<DepartureOptionsResponse>(
+        `/api/departure-options?${params.toString()}`,
+        { method: "GET" },
+        signal,
+      );
     },
   };
 }

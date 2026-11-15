@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { MilesByLevel, PlanResponse, RouteOption } from "../api/types";
 import { formatDuration, formatHosBreaks, formatMiles, formatShortClock } from "../lib/format";
 import { describeRecommendation } from "../lib/recommend";
@@ -34,9 +35,13 @@ interface RouteListProps {
   onSelect: (routeId: string) => void;
   onInspect: (routeId: string, index: number) => void;
   onHover?: (routeId: string | null) => void;
+  /** Rendered between the warnings and the route cards ("best time to leave"). */
+  beforeRoutes?: ReactNode;
+  /** Rendered under the route cards (the selected route's weather profile and trip playback). */
+  afterRoutes?: ReactNode;
 }
 
-export function RouteList({ plan, selectedId, onSelect, onInspect, onHover }: RouteListProps) {
+export function RouteList({ plan, selectedId, onSelect, onInspect, onHover, beforeRoutes, afterRoutes }: RouteListProps) {
   const ordered = [...plan.routes].sort((a, b) => a.rank - b.rank);
   const recommendation = describeRecommendation(plan);
   const reasons = plan.recommendation.explanation;
@@ -68,6 +73,7 @@ export function RouteList({ plan, selectedId, onSelect, onInspect, onHover }: Ro
           ))}
         </ul>
       )}
+      {beforeRoutes}
       <h2 className="section-title">Routes</h2>
       <ol onPointerLeave={() => onHover?.(null)}>
         {ordered.map((route) => (
@@ -82,6 +88,7 @@ export function RouteList({ plan, selectedId, onSelect, onInspect, onHover }: Ro
           />
         ))}
       </ol>
+      {afterRoutes}
     </section>
   );
 }

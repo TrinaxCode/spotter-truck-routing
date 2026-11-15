@@ -9,7 +9,7 @@ import { formatInchesPerHour, formatMiles, formatShortClock, formatSpeedMph, for
 import { NEUTRAL_ROUTE_COLOR, riskColor } from "../lib/riskColor";
 import { segmentRoute } from "../lib/routeSegments";
 import { etaHourIndex, floorHourIso } from "../lib/time";
-import type { MapHandle } from "./handle";
+import type { MapHandle, TruckPosition } from "./handle";
 
 export type { MapHandle } from "./handle";
 
@@ -43,6 +43,11 @@ const ROUTE_SOURCE = "routes";
 const SEGMENT_SOURCE = "segments";
 const CHECKPOINT_SOURCE = "checkpoints";
 const CORRIDOR_SOURCE = "corridor";
+/** One feature, rewritten every animation frame during trip playback. The only source that is. */
+const TRUCK_SOURCE = "truck";
+const TRUCK_ICON = "truck-arrow";
+/** Checkpoint ids are unique across routes so feature-state can address one of them. */
+const FEATURE_STRIDE = 100_000;
 
 /** Width in px at low and high zoom; MapLibre interpolates between them. */
 function zoomWidth(low: number, high: number): PaintExpr {
@@ -69,6 +74,8 @@ function ensureProbe(): SpotterProbe {
   window.__spotter ??= {
     sourceUpdates: 0,
     paintUpdates: 0,
+    truckUpdates: 0,
+    featureStateUpdates: 0,
     mapRenders: 0,
     frame: 0,
     variable: "risk",
@@ -149,6 +156,13 @@ export function createMapController(container: HTMLElement, options: MapControll
   let fadeTarget = 0;
   const markers: maplibregl.Marker[] = [];
   const hits = new Map<string, CheckpointHit>();
+  const featureIds = new Map<string, number>();
+  let focusedId: number | null = null;
+  let focusKey = "";
+  let truck: TruckPosition | null = null;
+  let followPadding: maplibregl.PaddingOptions | null = null;
+  let followPaddingAt = 0;
+  let lastFollowAt = 0;
 
   const overlayNodes = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>("[data-map-overlay]")];
 
@@ -197,6 +211,14 @@ export function createMapController(container: HTMLElement, options: MapControll
     if (import.meta.env.DEV) ensureProbe().sourceUpdates += 1;
   }
 
+  function bumpTruck(): void {
+    if (import.meta.env.DEV) ensureProbe().truckUpdates += 1;
+  }
+
+  function bumpFeatureState(): void {
+    if (import.meta.env.DEV) ensureProbe().featureStateUpdates += 1;
+  }
+
   function bumpPaint(): void {
     if (!import.meta.env.DEV) return;
     const probe = ensureProbe();
@@ -242,7 +264,7 @@ export function createMapController(container: HTMLElement, options: MapControll
   }
 
   function installLayers(): void {
-    for (const id of [CORRIDOR_SOURCE, ROUTE_SOURCE, SEGMENT_SOURCE, CHECKPOINT_SOURCE]) {
+    for (const id of [CORRIDOR_SOURCE, ROUTE_SOURCE, SEGMENT_SOURCE, CHECKPOINT_SOURCE, TRUCK_SOURCE]) {
       if (!map.getSource(id)) map.addSource(id, { type: "geojson", data: EMPTY });
     }
 
@@ -387,6 +409,85 @@ export function createMapController(container: HTMLElement, options: MapControll
         "circle-stroke-width": 0,
       },
     });
+    // The weather profile's cursor: a ring under the checkpoint dot, driven by feature-state alone.
+    const focused: PaintExpr = ["boolean", ["feature-state", "focus"], false];
+    addLayer(
+      {
+        id: "checkpoint-focus",
+        type: "circle",
+        source: CHECKPOINT_SOURCE,
+        paint: {
+          "circle-color": ACCENT[theme],
+          "circle-radius": 14,
+          "circle-opacity": ["case", focused, 0.3, 0] as unknown as AllPaintProperties["circle-opacity"],
+          "circle-stroke-color": ACCENT[theme],
+          "circle-stroke-width": 2.5,
+          "circle-stroke-opacity": ["case", focused, 1, 0] as unknown as AllPaintProperties["circle-stroke-opacity"],
+          "circle-pitch-alignment": "map",
+        },
+      },
+      "checkpoints",
+    );
+    installTruck();
+  }
+
+  /** Chevron for the truck, drawn once per style (a style swap drops added images). */
+  function installTruck(): void {
+    if (!map.hasImage(TRUCK_ICON)) {
+      const size = 48;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.moveTo(size / 2, 8);
+        ctx.lineTo(size - 11, size - 11);
+        ctx.lineTo(size / 2, size - 19);
+        ctx.lineTo(11, size - 11);
+        ctx.closePath();
+        ctx.fill();
+        map.addImage(TRUCK_ICON, ctx.getImageData(0, 0, size, size), { pixelRatio: 2 });
+      }
+    }
+    addLayer({
+      id: "truck-halo",
+      type: "circle",
+      source: TRUCK_SOURCE,
+      paint: {
+        "circle-radius": 19,
+        "circle-color": ["case", ["==", ["get", "stopped"], true], "#f6c928", ACCENT[theme]] as unknown as AllPaintProperties["circle-color"],
+        "circle-opacity": 0.28,
+        "circle-pitch-alignment": "map",
+      },
+    });
+    addLayer({
+      id: "truck-body",
+      type: "circle",
+      source: TRUCK_SOURCE,
+      paint: {
+        "circle-radius": 11,
+        "circle-color": ["case", ["==", ["get", "stopped"], true], "#f6c928", ACCENT[theme]] as unknown as AllPaintProperties["circle-color"],
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 3,
+        "circle-pitch-alignment": "map",
+      },
+    });
+    addLayer({
+      id: "truck-arrow",
+      type: "symbol",
+      source: TRUCK_SOURCE,
+      layout: {
+        "icon-image": TRUCK_ICON,
+        "icon-size": 0.62,
+        "icon-rotate": ["get", "bearing"],
+        "icon-rotation-alignment": "map",
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+      },
+      paint: { "icon-opacity": ["case", ["==", ["get", "stopped"], true], 0, 1] as unknown as AllPaintProperties["icon-opacity"] },
+    });
   }
 
   /**
@@ -452,7 +553,7 @@ export function createMapController(container: HTMLElement, options: MapControll
       map.setFilter("route-halt", ["all", selected, ["==", ["get", "level"], 4]]);
     }
     // Only the selected route shows checkpoints; the others stay quiet until picked.
-    for (const id of ["checkpoints", "checkpoint-hit"]) {
+    for (const id of ["checkpoints", "checkpoint-hit", "checkpoint-focus"]) {
       if (map.getLayer(id)) map.setFilter(id, selected);
     }
     applyHover();
@@ -544,10 +645,12 @@ export function createMapController(container: HTMLElement, options: MapControll
 
   function checkpointCollection(next: PlanResponse, startIso: string | null): GeoJSON.FeatureCollection {
     hits.clear();
+    featureIds.clear();
     const features: GeoJSON.Feature[] = [];
-    for (const route of next.routes) {
+    for (const [routeIndex, route] of next.routes.entries()) {
       for (const checkpoint of route.checkpoints) {
         const key = `${route.id}:${checkpoint.index}`;
+        featureIds.set(key, routeIndex * FEATURE_STRIDE + checkpoint.index);
         hits.set(key, {
           routeId: route.id,
           index: checkpoint.index,
@@ -557,6 +660,7 @@ export function createMapController(container: HTMLElement, options: MapControll
         const weather = checkpoint.weather;
         features.push({
           type: "Feature",
+          id: routeIndex * FEATURE_STRIDE + checkpoint.index,
           properties: {
             routeId: route.id,
             index: checkpoint.index,
@@ -732,6 +836,58 @@ export function createMapController(container: HTMLElement, options: MapControll
     applyFrame();
   }
 
+  function truckCollection(): GeoJSON.FeatureCollection {
+    if (!truck) return EMPTY;
+    return {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: { bearing: truck.bearing, stopped: truck.stopped },
+          geometry: { type: "Point", coordinates: [truck.lon, truck.lat] },
+        },
+      ],
+    };
+  }
+
+  function applyFocus(): void {
+    if (focusedId == null || !map.getSource(CHECKPOINT_SOURCE)) return;
+    map.setFeatureState({ source: CHECKPOINT_SOURCE, id: focusedId }, { focus: true });
+  }
+
+  function clearFocus(): void {
+    if (focusedId != null && map.getSource(CHECKPOINT_SOURCE)) {
+      map.removeFeatureState({ source: CHECKPOINT_SOURCE, id: focusedId }, "focus");
+    }
+    focusedId = null;
+    focusKey = "";
+  }
+
+  /** Brings the camera to a truck that has left the visible part of the map, at most twice a second. */
+  function keepTruckInView(): void {
+    if (!truck || map.isMoving()) return;
+    const now = performance.now();
+    if (now - lastFollowAt < 600) return;
+    if (!followPadding || now - followPaddingAt > 500) {
+      followPadding = overlayPadding();
+      followPaddingAt = now;
+    }
+    const size = map.getContainer().getBoundingClientRect();
+    const at = map.project([truck.lon, truck.lat]);
+    const margin = 24;
+    const inside =
+      at.x >= followPadding.left! + margin &&
+      at.x <= size.width - followPadding.right! - margin &&
+      at.y >= followPadding.top! + margin &&
+      at.y <= size.height - followPadding.bottom! - margin;
+    if (inside) return;
+    lastFollowAt = now;
+    autoFramed = null;
+    const camera = { center: [truck.lon, truck.lat] as [number, number], padding: followPadding };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) map.jumpTo(camera);
+    else map.easeTo({ ...camera, duration: 500 });
+  }
+
   function restore(): void {
     installLayers();
     if (plan) {
@@ -743,7 +899,9 @@ export function createMapController(container: HTMLElement, options: MapControll
     }
     if (heat) {
       writeSource(CORRIDOR_SOURCE, corridorFeatures(heat));
-      }
+    }
+    if (truck) geoSource(TRUCK_SOURCE)?.setData(truckCollection());
+    applyFocus();
     // A theme change redraws a finished corridor; it does not replay the fade.
     cancelAnimationFrame(fadeFrame);
     fadeFrame = 0;
@@ -842,11 +1000,19 @@ export function createMapController(container: HTMLElement, options: MapControll
       plan = next;
       selectedId = next.recommended_route_id;
       hoverId = "";
+      // Ids are per plan; a ring or truck from the previous trip does not carry over.
+      if (styled) clearFocus();
+      else {
+        focusedId = null;
+        focusKey = "";
+      }
+      truck = null;
       // The previous corridor belongs to the previous trip; drop it until the new one arrives.
       const stale = heat !== null;
       heat = null;
       if (!styled) return;
       applyPlan();
+      geoSource(TRUCK_SOURCE)?.setData(EMPTY);
       if (stale) {
         writeSource(CORRIDOR_SOURCE, EMPTY);
         cancelAnimationFrame(fadeFrame);
@@ -898,6 +1064,26 @@ export function createMapController(container: HTMLElement, options: MapControll
       };
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) map.jumpTo(camera);
       else map.easeTo({ ...camera, duration: 400 });
+    },
+    setFocus(routeId, index) {
+      if (!alive) return;
+      const key = routeId == null || index == null ? "" : `${routeId}:${index}`;
+      if (key === focusKey) return;
+      if (styled) clearFocus();
+      focusKey = key;
+      focusedId = key ? (featureIds.get(key) ?? null) : null;
+      if (styled) {
+        applyFocus();
+        bumpFeatureState();
+      }
+    },
+    setTruck(next) {
+      if (!alive) return;
+      truck = next;
+      if (!styled) return;
+      geoSource(TRUCK_SOURCE)?.setData(truckCollection());
+      bumpTruck();
+      keepTruckInView();
     },
     destroy() {
       alive = false;

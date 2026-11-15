@@ -23,6 +23,9 @@
   --severe: #ff3d57;
   --halt: #c026d3;
   --unknown: #7c8794;
+  /* Precipitation in the weather profile; each theme picks a pair that holds 3:1 on its panel. */
+  --rain: #38bdf8;
+  --snow: #c4b5fd;
 
   --hit: 36px;
   --panel-w: 340px;
@@ -84,6 +87,8 @@
   --sk-1: rgb(15 23 42 / 0.05);
   --sk-2: rgb(15 23 42 / 0.1);
   --bar-edge: rgb(15 23 42 / 0.28);
+  --rain: #0b78c2;
+  --snow: #6c4fe0;
 }
 
 @media (pointer: coarse), (max-width: 767px) {
@@ -1277,6 +1282,379 @@ h2 {
 .check-dot[data-level="1"] { --lvl: var(--moderate); }
 .check-dot[data-level="2"] { --lvl: var(--high); }
 .check-dot[data-level="3"] { --lvl: var(--severe); }
+
+/* ---------------------------------------------------------------------------------------------
+   Best time to leave: one bar per departure hour
+   --------------------------------------------------------------------------------------------- */
+.depart-callout {
+  margin-top: 0;
+}
+.depart-copy {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.apply-btn {
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 650;
+  transition: filter 0.15s var(--ease), transform 0.15s var(--ease);
+}
+.apply-btn:hover {
+  filter: brightness(1.1);
+}
+.apply-btn:active {
+  transform: translateY(1px);
+}
+.depart-stay {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.depart-stay svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--low);
+}
+.depart-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+.depart-skeleton {
+  display: grid;
+  gap: 8px;
+}
+.depart-sk-line {
+  height: 20px;
+  width: 80%;
+}
+.depart-sk-bars {
+  height: 112px;
+  border-radius: var(--radius-card);
+}
+.strip-wrap {
+  margin-top: 10px;
+  padding: 12px 12px 8px;
+  border-radius: var(--radius-card);
+  background: var(--raised);
+}
+.depart-callout + .strip-wrap,
+.depart-stay + .strip-wrap {
+  margin-top: 10px;
+}
+.strip {
+  display: grid;
+  grid-template-columns: repeat(var(--slots, 25), minmax(0, 1fr));
+  gap: 2px;
+  height: 64px;
+}
+.strip-bar {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  transition: background-color 0.12s var(--ease);
+}
+.strip-bar:hover {
+  background: var(--raised-strong);
+}
+.strip-fill {
+  display: block;
+  width: 100%;
+  height: calc(var(--h, 0.08) * 100%);
+  border-radius: 3px 3px 1px 1px;
+  background: var(--c);
+  box-shadow: inset 0 0 0 1px var(--bar-edge);
+  transition: height 0.35s var(--ease);
+}
+/* Missing forecast and No Travel never rely on colour alone. */
+.strip-bar[data-partial="true"] .strip-fill {
+  background-image: repeating-linear-gradient(45deg, rgb(0 0 0 / 0.42) 0 1.5px, transparent 1.5px 4px);
+}
+.strip-bar[data-level="4"] .strip-fill {
+  background-color: var(--halt);
+  background-image: repeating-linear-gradient(-45deg, transparent 0 1.5px, rgb(255 255 255 / 0.75) 1.5px 3px);
+}
+.strip-bar[aria-checked="true"] {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+  background: var(--raised-strong);
+}
+.strip-bar[data-suggested="true"]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 7px;
+  height: 7px;
+  border-left: 2px solid var(--accent);
+  border-top: 2px solid var(--accent);
+  transform: translateX(-50%) rotate(45deg);
+  pointer-events: none;
+}
+.strip-ticks {
+  position: relative;
+  height: 20px;
+  margin-top: 8px;
+}
+.strip-tick {
+  position: absolute;
+  top: 0;
+  left: calc(var(--at, 0) * 100%);
+  transform: translateX(-50%);
+  font-size: var(--fs-xs);
+  line-height: 1.3;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.strip-tick:first-child {
+  transform: translateX(-15%);
+}
+.strip-tick:last-child {
+  transform: translateX(-85%);
+}
+.strip-detail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  border-top: 1px solid var(--hairline);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.strip-detail p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.strip-detail .text-btn {
+  flex: none;
+}
+.strip-caption {
+  margin: 0 0 2px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------------------------------------
+   Weather profile and trip playback
+   --------------------------------------------------------------------------------------------- */
+.trip-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 12px 10px;
+  border-radius: var(--radius-card);
+  background: var(--raised);
+}
+.trip-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.trip-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  transition: filter 0.15s var(--ease), transform 0.15s var(--ease);
+}
+.trip-play:hover {
+  filter: brightness(1.1);
+}
+.trip-play:active {
+  transform: scale(0.97);
+}
+.chips.trip-speed {
+  flex: none;
+}
+.chips.trip-speed button {
+  flex: none;
+  min-width: 48px;
+}
+.trip-stop {
+  flex: none;
+}
+.stepper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.step-btn {
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--raised-strong);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.step-btn-main {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.step-btn:disabled {
+  opacity: 0.45;
+}
+.trip-readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-height: 44px;
+  padding: 0 2px;
+}
+.trip-readout > :first-child {
+  flex: 1 1 0;
+  min-width: 12ch;
+}
+.readout-line {
+  font-size: var(--fs-sm);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.trip-readout[data-active="true"][data-cursor="false"] .readout-line {
+  color: var(--accent-strong);
+}
+.readout-hint {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  max-width: 44ch;
+}
+.stop-badge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--moderate) 24%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--moderate) 65%, transparent);
+  font-size: var(--fs-xs);
+  font-weight: 650;
+  line-height: 1.6;
+}
+.profile-chart {
+  position: relative;
+  min-width: 0;
+  overflow-x: clip;
+  border-radius: 10px;
+  cursor: crosshair;
+  touch-action: pan-y;
+  user-select: none;
+}
+.profile-chart svg {
+  display: block;
+  overflow: visible;
+}
+.profile-label {
+  font-size: 10px;
+  fill: var(--muted);
+}
+.profile-tick {
+  font-size: 11px;
+  fill: var(--muted);
+}
+.profile-tick-time {
+  fill: var(--ink);
+  font-weight: 600;
+}
+.profile-wind {
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+.profile-rain {
+  fill: var(--rain);
+}
+.profile-snow {
+  fill: var(--snow);
+}
+.profile-stop rect {
+  fill: var(--surface-solid);
+  stroke: var(--muted);
+}
+.profile-stop text {
+  font-size: 10px;
+  font-weight: 650;
+  fill: var(--ink);
+}
+.profile-truck line {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.profile-truck circle {
+  fill: var(--accent);
+  stroke: #fff;
+  stroke-width: 2;
+}
+.profile-cursor line {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  opacity: 0.85;
+}
+.profile-cursor circle {
+  fill: var(--ink);
+  stroke: var(--surface-solid);
+  stroke-width: 2;
+}
+.profile-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.profile-key li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.key-line {
+  width: 16px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ink);
+}
+.key-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.key-rain {
+  background: var(--rain);
+}
+.key-snow {
+  background: var(--snow);
+}
+.key-tab {
+  width: 14px;
+  height: 9px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px var(--muted);
+}
 
 /* ---------------------------------------------------------------------------------------------
    Empty, loading and error states

@@ -147,3 +147,36 @@ export interface HeatmapResponse {
 }
 
 export type HeatVariable = "risk" | "wind" | "rain" | "snow";
+
+/** SPEC §12.1: one route re-scored for a shifted departure. */
+export interface DepartureRouteScore {
+  route_id: string;
+  miles_by_level: MilesByLevel;
+  avg_risk: number;
+  max_level: RiskLevel | null;
+  weather_coverage: number;
+  total_time_s: number;
+  arrival: string;
+}
+
+export interface DepartureOption {
+  offset_h: number;
+  departure: string;
+  best_route_id: string;
+  routes: DepartureRouteScore[];
+}
+
+export interface DepartureSuggestion {
+  offset_h: number;
+  departure: string;
+  route_id: string;
+  headline: string;
+  improvement: { no_travel_mi: number; severe_mi: number; high_mi: number };
+}
+
+export interface DepartureOptionsResponse {
+  plan_id: string;
+  base_departure: string;
+  options: DepartureOption[];
+  suggestion: DepartureSuggestion | null;
+}

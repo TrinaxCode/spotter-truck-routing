@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "e2e": "playwright test",
-    "fixtures": "node --experimental-strip-types scripts/build-fixtures.ts"
+    "fixtures": "node --experimental-strip-types scripts/build-fixtures.ts",
+    "fixtures:departures": "node --experimental-strip-types scripts/build-departure-fixture.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

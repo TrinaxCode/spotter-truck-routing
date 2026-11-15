@@ -23,9 +23,26 @@ interface HeatmapBarProps {
   error?: string;
   onRetry: () => void;
   onFrame: (hour: number, variable: HeatVariable, visible: boolean) => void;
+  /**
+   * Trip playback drives the forecast: while this is a number the bar shows that hour (the truck's)
+   * and keeps the heatmap on it. When it goes back to null the slider stays where the truck left it.
+   */
+  followHour?: number | null;
+  /** The truck is moving: the slider and play button wait instead of fighting it. */
+  locked?: boolean;
 }
 
-export function HeatmapBar({ startIso, departureIso, coverage, status, error, onRetry, onFrame }: HeatmapBarProps) {
+export function HeatmapBar({
+  startIso,
+  departureIso,
+  coverage,
+  status,
+  error,
+  onRetry,
+  onFrame,
+  followHour = null,
+  locked = false,
+}: HeatmapBarProps) {
   const [hour, setHour] = useState(0);
   const [variable, setVariable] = useState<HeatVariable>("risk");
   const [visible, setVisible] = useState(true);
@@ -33,10 +50,26 @@ export function HeatmapBar({ startIso, departureIso, coverage, status, error, on
   const [reduceMotion, setReduceMotion] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
+  const [seenFollow, setSeenFollow] = useState<number | null>(null);
   const hourRef = useRef(0);
   const variableRef = useRef<HeatVariable>("risk");
   const visibleRef = useRef(true);
   const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Adopt the truck's hour while it drives (state adjusted during render, as TripSheet does).
+  if (followHour !== seenFollow) {
+    setSeenFollow(followHour);
+    if (followHour != null) {
+      setHour(followHour);
+      setPlaying(false);
+    }
+  }
+
+  useEffect(() => {
+    if (followHour == null || status !== "ready") return;
+    hourRef.current = followHour;
+    onFrame(followHour, variableRef.current, visibleRef.current);
+  }, [followHour, status, onFrame]);
 
   // Publish the card's height so floating panels can stop above it on narrow screens.
   useEffect(() => {
@@ -97,6 +130,7 @@ export function HeatmapBar({ startIso, departureIso, coverage, status, error, on
     ? `No ${VARIABLES.find((item) => item.id === variable)?.label ?? "forecast"} values came back for this corridor.`
     : error || "The forecast did not load.";
   const ready = status === "ready" && !!startIso && !empty;
+  const frozen = !ready || locked;
   const time = startIso ? formatFrameTime(startIso, hour) : "";
   const offset = formatFrameOffset(hour, startIso, departureIso);
   const label = `${time}, ${offset}`;
@@ -112,7 +146,7 @@ export function HeatmapBar({ startIso, departureIso, coverage, status, error, on
           className="play"
           aria-pressed={playing}
           aria-label={playing ? "Pause forecast" : "Play forecast"}
-          disabled={!ready || reduceMotion}
+          disabled={frozen || reduceMotion}
           onClick={() => {
             // Pressing play on the last frame starts over instead of stopping at once.
             if (!playing && hourRef.current >= 48) push(0, variableRef.current, visibleRef.current);
@@ -200,7 +234,7 @@ export function HeatmapBar({ startIso, departureIso, coverage, status, error, on
             max={48}
             step={1}
             value={hour}
-            disabled={!ready}
+            disabled={frozen}
             aria-label="Forecast hour"
             aria-valuemin={0}
             aria-valuemax={48}

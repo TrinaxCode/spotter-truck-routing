@@ -2,7 +2,8 @@
  * Synthetic corridor weather for the Dallas → Denver demo fixtures.
  * Hour 0 is the departure hour. A snow/wind cell starts over Amarillo and
  * drifts toward Raton so the panhandle and southern routes meet it, while
- * the I-70 route stays north of the cell.
+ * the I-70 route stays north of the cell. A dry cold front crosses Kansas early on,
+ * so the I-70 route has a cleaner window a few hours after departure.
  */
 
 export interface FieldSample {
@@ -20,6 +21,18 @@ function stormCenter(hour: number): { lat: number; lon: number } {
     lat: 35.22 + (36.95 - 35.22) * t,
     lon: -101.83 + (-104.45 - -101.83) * t,
   };
+}
+
+/**
+ * A dry cold front sweeping east across the plains (north of the panhandle): gusty, no
+ * precipitation. Routes crossing Kansas while it passes see High wind; leaving later clears it.
+ */
+function frontWind(lat: number, lon: number, hour: number): number {
+  if (lat < 35.4 || lat > 40.2) return 0;
+  const centre = -101.4 + 0.45 * hour;
+  const distance = Math.abs(lon - centre);
+  if (distance > 1.3) return 0;
+  return 41 - distance * 6;
 }
 
 function round2(value: number): number {
@@ -63,6 +76,8 @@ export function sampleField(lat: number, lon: number, hour: number): FieldSample
     wind = Math.min(wind, 22);
     rain = 0;
   }
+
+  if (distance >= 1.05) wind = Math.max(wind, frontWind(lat, lon, hour));
 
   wind = round2(wind);
   const gust = round2(wind * 1.42);

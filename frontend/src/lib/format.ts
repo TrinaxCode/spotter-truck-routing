@@ -129,6 +129,13 @@ export function formatShortClock(iso: string): string {
   return shortClock.format(date).replace(",", "");
 }
 
+/** "Mon 3:40a" or "Mon 6p": weekday and a one-letter meridiem, for tight chart axes. */
+export function formatCompactClock(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+  return `${weekday.format(date)} ${shortHour(date)}`;
+}
+
 export interface ForecastTick {
   hour: number;
   /** Compact local clock, e.g. "3p" or "3:30p". */

@@ -1,4 +1,5 @@
 import type {
+  DepartureOptionsResponse,
   GeocodeResponse,
   GeoPoint,
   HealthResponse,
@@ -10,8 +11,10 @@ import { ApiError } from "../api/errors";
 import { samePoint } from "../lib/geo";
 import { toUtcZ } from "../lib/time";
 import { RISK_LABELS, assess } from "./assess";
+import { suggest } from "./departures";
 import { rescore } from "./score";
 import { warpLngLat, type LatLon } from "./warp";
+import departureFixture from "./departure-options.mock.json";
 import heatmapFixture from "./heatmap.json";
 import placesFixture from "./places.json";
 import plansFixture from "./plans.json";
@@ -27,6 +30,8 @@ interface PlansBundle {
 const bundle = plansFixture as unknown as PlansBundle;
 const places = placesFixture as GeoPoint[];
 const heatmapBase = heatmapFixture as unknown as HeatmapResponse;
+const departureBase = departureFixture as unknown as Record<string, DepartureOptionsResponse>;
+const HOUR_MS = 3_600_000;
 
 export const CANONICAL_DEPARTURE = bundle.canonical_departure;
 export const CANONICAL_LOAD = bundle.load_lbs;
@@ -48,6 +53,12 @@ let lastContext: MockContext = {
   destination: CANONICAL_DESTINATION,
   planId: "c0ffee25",
 };
+
+/**
+ * Departure the demo session started from. Applying a suggestion later in the same session slides
+ * the departure window by the hours moved past it; a new route starts a new session.
+ */
+let anchorDeltaMs: number | null = null;
 
 function delay(ms: number, signal?: AbortSignal): Promise<void> {
   if (ms <= 0) {
@@ -196,6 +207,9 @@ export async function mockPlan(
   if (body.load_lbs !== bundle.load_lbs) applyLoad(plan, body.load_lbs);
   if (!body.hos) applyDriveOnly(plan);
   if (body.load_lbs !== bundle.load_lbs || !body.hos) rescore(plan);
+  if (anchorDeltaMs === null || !samePoint(lastContext.origin, body.origin) || !samePoint(lastContext.destination, body.destination)) {
+    anchorDeltaMs = deltaMs;
+  }
   lastContext = {
     deltaMs,
     loadLbs: body.load_lbs,
@@ -247,4 +261,39 @@ export async function mockHeatmap(
     );
   }
   return heat;
+}
+
+/**
+ * Demo departure options. The fixture holds 49 hourly departures for the canonical trip; after the
+ * driver applies a suggestion (the mock plan then departs N hours later) the window slides by N
+ * hours, so the next suggestion is computed for the new departure like the real backend would.
+ * Weather in demo mode does not react to the load or HOS switches.
+ */
+export async function mockDepartureOptions(
+  planId: string,
+  delayMs: number,
+  signal?: AbortSignal,
+): Promise<DepartureOptionsResponse> {
+  await delay(delayMs, signal);
+  const raw = departureBase[planId];
+  if (!raw) throw new ApiError(404, "not_found", "Plan not found or expired.");
+  const shiftH = Math.max(0, Math.min(24, Math.round((lastContext.deltaMs - (anchorDeltaMs ?? lastContext.deltaMs)) / HOUR_MS)));
+  const base = shiftIso(raw.base_departure, lastContext.deltaMs);
+  const options = raw.options
+    .filter((option) => option.offset_h >= shiftH && option.offset_h <= shiftH + 24)
+    .map((option) => ({
+      ...structuredClone(option),
+      offset_h: option.offset_h - shiftH,
+      departure: toUtcZ(Date.parse(base) + (option.offset_h - shiftH) * HOUR_MS),
+    }));
+  for (const option of options) {
+    for (const route of option.routes) route.arrival = shiftIso(route.arrival, lastContext.deltaMs - shiftH * HOUR_MS);
+  }
+  const labels: Record<string, string> = { r1: "Route A", r2: "Route B", r3: "Route C" };
+  return {
+    plan_id: planId,
+    base_departure: base,
+    options,
+    suggestion: suggest(options, (id) => labels[id] ?? id),
+  };
 }

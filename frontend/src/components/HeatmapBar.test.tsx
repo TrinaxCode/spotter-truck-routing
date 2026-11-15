@@ -54,3 +54,34 @@ describe("HeatmapBar frame labels", () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("HeatmapBar following the trip", () => {
+  const props = {
+    startIso: "2026-11-16T05:00:00Z",
+    departureIso: "2026-11-16T05:00:00Z",
+    status: "ready" as const,
+    onRetry: noop,
+  };
+
+  it("shows the truck's hour, keeps the heatmap on it and locks the slider while it drives", () => {
+    const onFrame = vi.fn();
+    const { rerender } = render(<HeatmapBar {...props} onFrame={onFrame} followHour={null} locked={false} />);
+    expect(screen.getByTestId("heatmap-slider")).toBeEnabled();
+
+    rerender(<HeatmapBar {...props} onFrame={onFrame} followHour={7} locked />);
+    const slider = screen.getByTestId("heatmap-slider");
+    expect(slider).toHaveValue("7");
+    expect(slider).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Play forecast" })).toBeDisabled();
+    expect(onFrame).toHaveBeenLastCalledWith(7, "risk", true);
+    expect(screen.getByTestId("forecast-clock")).toHaveTextContent("+7 h from departure");
+
+    rerender(<HeatmapBar {...props} onFrame={onFrame} followHour={8} locked />);
+    expect(onFrame).toHaveBeenLastCalledWith(8, "risk", true);
+
+    // Playback ends: the slider stays on the truck's last hour and is usable again.
+    rerender(<HeatmapBar {...props} onFrame={onFrame} followHour={null} locked={false} />);
+    expect(slider).toHaveValue("8");
+    expect(slider).toBeEnabled();
+  });
+});

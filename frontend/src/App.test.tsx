@@ -3,12 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { ApiError } from "./api/errors";
-import type { HeatmapResponse, PlanResponse } from "./api/types";
+import type { DepartureOptionsResponse, HeatmapResponse, PlanResponse } from "./api/types";
+import departureFixture from "./mocks/departure-options.mock.json";
 import heatmapSample from "./mocks/backend-heatmap.sample.json";
 import planSample from "./mocks/backend-plan.sample.json";
 
 const planRoutes = vi.fn();
 const fetchHeatmap = vi.fn();
+const fetchDepartureOptions = vi.fn();
 
 vi.mock("./api/client", () => ({
   api: {
@@ -16,6 +18,7 @@ vi.mock("./api/client", () => ({
     geocode: vi.fn(async () => ({ results: [] })),
     planRoutes: (...args: unknown[]) => planRoutes(...args),
     fetchHeatmap: (...args: unknown[]) => fetchHeatmap(...args),
+    fetchDepartureOptions: (...args: unknown[]) => fetchDepartureOptions(...args),
   },
 }));
 // maplibre needs WebGL; the map is covered by the Playwright suite.
@@ -24,6 +27,8 @@ vi.mock("./map/MapCanvas", () => ({ MapCanvas: () => <div data-testid="map-canva
 beforeEach(() => {
   planRoutes.mockReset();
   fetchHeatmap.mockReset();
+  fetchDepartureOptions.mockReset();
+  fetchDepartureOptions.mockRejectedValue(new ApiError(404, "not_found", "Plan not found or expired."));
 });
 
 describe("App against backend payloads", () => {
@@ -175,5 +180,48 @@ describe("App against backend payloads", () => {
     await user.click(screen.getByRole("radio", { name: "Wind" }));
     expect(screen.getByTestId("heatmap-slider")).toBeEnabled();
   });
-});
 
+  describe("best time to leave", () => {
+    const full = (departureFixture as unknown as Record<string, DepartureOptionsResponse>).c0ffee25;
+    // The fixture keeps a second day for the demo; the contract is 25 hourly options.
+    const options = { ...full, options: full.options.slice(0, 25) };
+
+    it("never blocks the plan: a failure is a quiet inline retry that works", async () => {
+      planRoutes.mockResolvedValue(planSample as unknown as PlanResponse);
+      fetchHeatmap.mockResolvedValue(heatmapSample as unknown as HeatmapResponse);
+      fetchDepartureOptions.mockRejectedValueOnce(new ApiError(502, "upstream_error", "Weather service is down."));
+      fetchDepartureOptions.mockResolvedValue({ ...options, plan_id: planSample.plan_id });
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(screen.getByRole("button", { name: "Plan routes" }));
+      expect(await screen.findAllByTestId("route-card")).toHaveLength(3);
+      const strip = await screen.findByRole("region", { name: "Best time to leave" });
+      expect(await within(strip).findByText(/Weather service is down/)).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByTestId("heatmap-slider")).toBeEnabled());
+      await user.click(within(strip).getByRole("button", { name: "Retry" }));
+      expect(await screen.findAllByTestId("departure-bar")).toHaveLength(25);
+      expect(fetchDepartureOptions).toHaveBeenCalledWith(planSample.plan_id, expect.any(AbortSignal));
+    });
+
+    it("applies the suggestion by planning the same trip at the suggested departure", async () => {
+      planRoutes.mockResolvedValue(planSample as unknown as PlanResponse);
+      fetchHeatmap.mockResolvedValue(heatmapSample as unknown as HeatmapResponse);
+      fetchDepartureOptions.mockResolvedValue({ ...options, plan_id: planSample.plan_id });
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(screen.getByRole("button", { name: "Plan routes" }));
+      await user.click(await screen.findByTestId("apply-suggestion"));
+      await waitFor(() => expect(planRoutes).toHaveBeenCalledTimes(2));
+      const [first] = planRoutes.mock.calls[0] as [{ departure: string }];
+      const [second] = planRoutes.mock.calls[1] as [typeof first & Record<string, unknown>];
+      expect(Date.parse(second.departure)).toBe(Date.parse(options.suggestion!.departure));
+      expect({ ...second, departure: "" }).toEqual({ ...first, departure: "" });
+      // The form shows the time that was planned, not the one before.
+      await user.click(await screen.findByRole("button", { name: "Edit" }));
+      const planned = new Date(options.suggestion!.departure);
+      const pad = (value: number) => String(value).padStart(2, "0");
+      const local = `${planned.getFullYear()}-${pad(planned.getMonth() + 1)}-${pad(planned.getDate())}T${pad(planned.getHours())}:${pad(planned.getMinutes())}`;
+      expect(screen.getByLabelText("Departure")).toHaveValue(local);
+    });
+  });
+});

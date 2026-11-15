@@ -15,6 +15,11 @@ interface PlanFormProps {
   serverErrors?: FieldErrors;
   onPlan: (draft: TripDraft) => void;
   search: (query: string, signal: AbortSignal) => Promise<GeoPoint[]>;
+  /**
+   * Replaces the departure field when `token` changes (a suggested departure was applied elsewhere),
+   * so Edit shows the time that was actually planned.
+   */
+  departureSync?: { local: string; token: number } | null;
 }
 
 function initialDraft(): TripDraft {
@@ -28,8 +33,13 @@ function initialDraft(): TripDraft {
   };
 }
 
-export function PlanForm({ busy, serverErrors, onPlan, search }: PlanFormProps) {
+export function PlanForm({ busy, serverErrors, onPlan, search, departureSync }: PlanFormProps) {
   const [draft, setDraft] = useState<TripDraft>(initialDraft);
+  const [seenSync, setSeenSync] = useState(0);
+  if (departureSync && departureSync.token !== seenSync) {
+    setSeenSync(departureSync.token);
+    setDraft((current) => ({ ...current, departureLocal: departureSync.local }));
+  }
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [attempted, setAttempted] = useState(false);
   const errors = validateDraft(draft);

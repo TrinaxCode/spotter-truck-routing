@@ -12,6 +12,10 @@ interface ImportMeta {
 interface SpotterProbe {
   sourceUpdates: number;
   paintUpdates: number;
+  /** Writes to the one-feature truck source (trip playback). */
+  truckUpdates: number;
+  /** Checkpoint ring changes from the weather profile (feature-state). */
+  featureStateUpdates: number;
   mapRenders: number;
   frame: number;
   variable: string;

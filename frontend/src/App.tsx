@@ -1,17 +1,28 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, describeApiError, flattenFieldErrors, isRetryable, type FieldIssues } from "./api/errors";
 import { api } from "./api/client";
-import type { Checkpoint, HeatmapResponse, HeatVariable, PlanResponse, RouteOption } from "./api/types";
+import type {
+  Checkpoint,
+  DepartureOptionsResponse,
+  HeatmapResponse,
+  HeatVariable,
+  PlanResponse,
+  RouteOption,
+} from "./api/types";
 import { CheckpointDialog } from "./components/CheckpointDialog";
+import { DepartureStrip, type DepartureStatus } from "./components/DepartureStrip";
 import { HeatmapBar } from "./components/HeatmapBar";
 import { PlanForm } from "./components/PlanForm";
 import { RouteList } from "./components/RouteList";
 import { EmptyState, ErrorNote, MapSkeleton, RouteSkeleton } from "./components/States";
+import { TripProfile } from "./components/TripProfile";
 import { TripSheet } from "./components/TripSheet";
 import { TripSummary } from "./components/TripSummary";
 import { heatmapCoverage, type HeatCoverage } from "./lib/heatmap";
 import { draftToRequest, type FieldErrors, type TripDraft } from "./lib/form";
 import { shortPlace } from "./lib/format";
+import { toLocalInput } from "./lib/time";
+import type { TripSample } from "./lib/tripTimeline";
 import type { MapHandle } from "./map/handle";
 
 const MapCanvas = lazy(() => import("./map/MapCanvas").then((module) => ({ default: module.MapCanvas })));
@@ -54,6 +65,14 @@ export function App() {
   const [heatError, setHeatError] = useState("");
   const [heatStart, setHeatStart] = useState<string | null>(null);
   const [heatCoverage, setHeatCoverage] = useState<Record<HeatVariable, HeatCoverage> | null>(null);
+  const [departures, setDepartures] = useState<{
+    status: DepartureStatus;
+    data: DepartureOptionsResponse | null;
+    error: string;
+  }>({ status: "idle", data: null, error: "" });
+  const [followHour, setFollowHour] = useState<number | null>(null);
+  const [tripPlaying, setTripPlaying] = useState(false);
+  const [departureSync, setDepartureSync] = useState<{ local: string; token: number } | null>(null);
   const [inspect, setInspect] = useState<{ route: RouteOption; checkpoint: Checkpoint } | null>(null);
   const [submitted, setSubmitted] = useState<TripDraft | null>(null);
   const [pending, setPending] = useState<TripDraft | null>(null);
@@ -111,6 +130,22 @@ export function App() {
     }
   }, []);
 
+  const loadDepartures = useCallback(async (planId: string) => {
+    setDepartures({ status: "loading", data: null, error: "" });
+    try {
+      const data = await api.fetchDepartureOptions(planId, abortRef.current?.signal);
+      setDepartures({ status: "ready", data, error: "" });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      // Departure options are advice on top of the plan; a failure here never blocks the plan.
+      setDepartures({
+        status: "error",
+        data: null,
+        error: describeApiError(error, "Departure options did not load."),
+      });
+    }
+  }, []);
+
   async function run(draft: TripDraft) {
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -125,6 +160,9 @@ export function App() {
     setHeatStatus("idle");
     setHeatStart(null);
     setHeatCoverage(null);
+    setDepartures({ status: "idle", data: null, error: "" });
+    setFollowHour(null);
+    setTripPlaying(false);
     try {
       const next = await api.planRoutes(draftToRequest(draft), controller.signal);
       if (controller.signal.aborted) return;
@@ -137,6 +175,7 @@ export function App() {
       queued.current = { plan: next, heat: null, selected: next.recommended_route_id };
       mapRef.current?.setPlan(next);
       void loadHeat(next.plan_id);
+      void loadDepartures(next.plan_id);
     } catch (error) {
       if (controller.signal.aborted || (error instanceof DOMException && error.name === "AbortError")) return;
       setPending(null);
@@ -196,11 +235,37 @@ export function App() {
     return () => observer.disconnect();
   }, []);
 
+  const labelOf = useCallback(
+    (routeId: string) => plan?.routes.find((route) => route.id === routeId)?.label ?? routeId,
+    [plan],
+  );
+
+  /** Re-plans the same trip leaving at a suggested time. */
+  function applyDeparture(departureIso: string) {
+    const draft = draftRef.current;
+    if (!draft) return;
+    const local = toLocalInput(new Date(departureIso));
+    setDepartureSync((current) => ({ local, token: (current?.token ?? 0) + 1 }));
+    void run({ ...draft, departureLocal: local });
+  }
+
+  const onTruck = useCallback((sample: TripSample | null) => {
+    mapRef.current?.setTruck(
+      sample ? { lon: sample.lon, lat: sample.lat, bearing: sample.bearing, stopped: sample.stop !== null } : null,
+    );
+  }, []);
+
+  const onFocusCheckpoint = useCallback((routeId: string, index: number | null) => {
+    mapRef.current?.setFocus(index == null ? null : routeId, index ?? undefined);
+  }, []);
+
   const selectRoute = useCallback((routeId: string) => {
     setSelectedId(routeId);
     queued.current.selected = routeId;
     mapRef.current?.setSelected(routeId);
   }, []);
+
+  const selectedRoute = plan?.routes.find((route) => route.id === (selectedId ?? plan.recommended_route_id));
 
   const title = submitted && status === "ready"
     ? `${shortPlace(submitted.origin?.label ?? "Origin")} → ${shortPlace(submitted.destination?.label ?? "Destination")}`
@@ -265,6 +330,7 @@ export function App() {
               busy={status === "loading"}
               serverErrors={serverErrors}
               search={async (query, signal) => (await api.geocode(query, signal)).results}
+              departureSync={departureSync}
               onPlan={(draft) => {
                 void run(draft);
               }}
@@ -293,6 +359,31 @@ export function App() {
                 openCheckpoint(routeId, index);
                 mapRef.current?.showCheckpoint(routeId, index);
               }}
+              beforeRoutes={
+                <DepartureStrip
+                  key={plan.plan_id}
+                  status={departures.status}
+                  data={departures.data}
+                  error={departures.error}
+                  labelOf={labelOf}
+                  generatedAt={plan.generated_at}
+                  onRetry={() => void loadDepartures(plan.plan_id)}
+                  onApply={applyDeparture}
+                />
+              }
+              afterRoutes={
+                selectedRoute && (
+                  <TripProfile
+                    key={`${plan.plan_id}:${selectedRoute.id}`}
+                    route={selectedRoute}
+                    heatStartIso={heatStart}
+                    onTruck={onTruck}
+                    onHour={setFollowHour}
+                    onPlaying={setTripPlaying}
+                    onFocusCheckpoint={onFocusCheckpoint}
+                  />
+                )
+              }
             />
           )}
         </TripSheet>
@@ -307,6 +398,8 @@ export function App() {
             if (plan) void loadHeat(plan.plan_id);
           }}
           onFrame={onFrame}
+          followHour={followHour}
+          locked={tripPlaying}
         />
       </div>
       {inspect && (
