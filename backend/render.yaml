@@ -1,0 +1,28 @@
+# Create the Blueprint using backend/render.yaml as its custom Blueprint path.
+services:
+  - type: web
+    name: spotter-backend
+    runtime: python
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 180 --access-logfile -
+    healthCheckPath: /api/health
+    autoDeployTrigger: "off"
+    disk:
+      name: spotter-cache
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DEBUG
+        value: "false"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: TOMTOM_API_KEY
+        sync: false
+      - key: CACHE_DIR
+        value: /var/data/spotter-cache
+      - key: TRUCK_TARE_LBS
+        value: "35000"
