@@ -1,0 +1,97 @@
+[
+  {
+    "lat": 32.7767,
+    "lon": -96.797,
+    "label": "Dallas, TX, USA"
+  },
+  {
+    "lat": 39.7392,
+    "lon": -104.9903,
+    "label": "Denver, CO, USA"
+  },
+  {
+    "label": "Fort Worth, TX, USA",
+    "lat": 32.7555,
+    "lon": -97.3308
+  },
+  {
+    "label": "Oklahoma City, OK, USA",
+    "lat": 35.4676,
+    "lon": -97.5164
+  },
+  {
+    "label": "Amarillo, TX, USA",
+    "lat": 35.222,
+    "lon": -101.8313
+  },
+  {
+    "label": "Lubbock, TX, USA",
+    "lat": 33.5779,
+    "lon": -101.8552
+  },
+  {
+    "label": "Wichita, KS, USA",
+    "lat": 37.6872,
+    "lon": -97.3301
+  },
+  {
+    "label": "Colorado Springs, CO, USA",
+    "lat": 38.8339,
+    "lon": -104.8214
+  },
+  {
+    "label": "Kansas City, MO, USA",
+    "lat": 39.0997,
+    "lon": -94.5786
+  },
+  {
+    "label": "Houston, TX, USA",
+    "lat": 29.7604,
+    "lon": -95.3698
+  },
+  {
+    "label": "Austin, TX, USA",
+    "lat": 30.2672,
+    "lon": -97.7431
+  },
+  {
+    "label": "San Antonio, TX, USA",
+    "lat": 29.4241,
+    "lon": -98.4936
+  },
+  {
+    "label": "Albuquerque, NM, USA",
+    "lat": 35.0844,
+    "lon": -106.6504
+  },
+  {
+    "label": "Phoenix, AZ, USA",
+    "lat": 33.4484,
+    "lon": -112.074
+  },
+  {
+    "label": "Chicago, IL, USA",
+    "lat": 41.8781,
+    "lon": -87.6298
+  },
+  {
+    "label": "Atlanta, GA, USA",
+    "lat": 33.749,
+    "lon": -84.388
+  },
+  {
+    "label": "Los Angeles, CA, USA",
+    "lat": 34.0522,
+    "lon": -118.2437
+  },
+  {
+    "label": "Salt Lake City, UT, USA",
+    "lat": 40.7608,
+    "lon": -111.891
+  },
+  {
+    "label": "Omaha, NE, USA",
+    "lat": 41.2565,
+    "lon": -95.9345
+  }
+]

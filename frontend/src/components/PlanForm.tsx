@@ -1,0 +1,161 @@
+import { useState } from "react";
+import type { GeoPoint } from "../api/types";
+import { draftIsValid, validateDraft, type FieldErrors, type TripDraft } from "../lib/form";
+import { parseLoadLbs } from "../lib/format";
+import { nextFullHourInput } from "../lib/time";
+import { PlaceCombobox } from "./PlaceCombobox";
+
+const DEFAULT_ORIGIN: GeoPoint = { lat: 32.7767, lon: -96.797, label: "Dallas, TX, USA" };
+const DEFAULT_DESTINATION: GeoPoint = { lat: 39.7392, lon: -104.9903, label: "Denver, CO, USA" };
+
+interface PlanFormProps {
+  busy: boolean;
+  serverErrors?: FieldErrors;
+  onPlan: (draft: TripDraft) => void;
+  search: (query: string, signal: AbortSignal) => Promise<GeoPoint[]>;
+}
+
+function initialDraft(): TripDraft {
+  return {
+    origin: DEFAULT_ORIGIN,
+    destination: DEFAULT_DESTINATION,
+    departureLocal: nextFullHourInput(),
+    loadText: "35,000",
+    interval: 25,
+    hos: true,
+  };
+}
+
+export function PlanForm({ busy, serverErrors, onPlan, search }: PlanFormProps) {
+  const [draft, setDraft] = useState<TripDraft>(initialDraft);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [attempted, setAttempted] = useState(false);
+  const errors = validateDraft(draft);
+
+  function show(key: keyof FieldErrors): string | undefined {
+    if (!(attempted || touched[key])) return serverErrors?.[key];
+    return errors[key] ?? serverErrors?.[key];
+  }
+
+  function patch(partial: Partial<TripDraft>, field?: keyof FieldErrors) {
+    setDraft((current) => ({ ...current, ...partial }));
+    if (field) setTouched((current) => ({ ...current, [field]: true }));
+  }
+
+  return (
+    <form
+      id="trip-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        setAttempted(true);
+        if (!draftIsValid(errors) || busy) return;
+        onPlan(draft);
+      }}
+    >
+      <PlaceCombobox
+        id="origin"
+        label="Origin"
+        value={draft.origin}
+        search={search}
+        error={show("origin")}
+        onBlur={() => setTouched((current) => ({ ...current, origin: true }))}
+        onChange={(origin) => patch({ origin }, "origin")}
+      />
+      <PlaceCombobox
+        id="destination"
+        label="Destination"
+        value={draft.destination}
+        search={search}
+        error={show("destination")}
+        onBlur={() => setTouched((current) => ({ ...current, destination: true }))}
+        onChange={(destination) => patch({ destination }, "destination")}
+      />
+      <div className="field">
+        <label htmlFor="departure">Departure</label>
+        <input
+          id="departure"
+          type="datetime-local"
+          value={draft.departureLocal}
+          aria-invalid={show("departure") ? true : undefined}
+          aria-describedby={show("departure") ? "departure-error" : undefined}
+          onChange={(event) => patch({ departureLocal: event.target.value })}
+          onBlur={() => setTouched((current) => ({ ...current, departure: true }))}
+        />
+        {show("departure") ? (
+          <p id="departure-error" className="field-error">
+            {show("departure")}
+          </p>
+        ) : (
+          <p className="field-hint">Local time. Default is the next full hour.</p>
+        )}
+      </div>
+      <div className="field">
+        <label htmlFor="load">Load weight</label>
+        <div className="suffix-field">
+          <input
+            id="load"
+            inputMode="numeric"
+            autoComplete="off"
+            value={draft.loadText}
+            aria-invalid={show("load") ? true : undefined}
+            aria-describedby="load-hint"
+            onChange={(event) => patch({ loadText: event.target.value })}
+            onBlur={() => {
+              setTouched((current) => ({ ...current, load: true }));
+              const parsed = parseLoadLbs(draft.loadText);
+              if (parsed != null) patch({ loadText: parsed.toLocaleString("en-US") });
+            }}
+          />
+          <span aria-hidden="true">lb</span>
+        </div>
+        <p id="load-hint" className={show("load") ? "field-error" : "field-hint"}>
+          {show("load") ?? "Cargo only, up to 80,000 lb."}
+        </p>
+      </div>
+      <fieldset className="segment">
+        <legend>Checkpoint spacing</legend>
+        <div role="radiogroup" aria-label="Checkpoint spacing" className="segment-row">
+          {([10, 25, 50] as const).map((miles) => (
+            <button
+              key={miles}
+              type="button"
+              role="radio"
+              aria-checked={draft.interval === miles}
+              onClick={() => patch({ interval: miles })}
+              onKeyDown={(event) => {
+                const order = [10, 25, 50] as const;
+                const index = order.indexOf(draft.interval);
+                if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+                  event.preventDefault();
+                  patch({ interval: order[(index + 1) % order.length] });
+                } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+                  event.preventDefault();
+                  patch({ interval: order[(index + order.length - 1) % order.length] });
+                }
+              }}
+            >
+              {miles} mi
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <button
+        type="button"
+        className="switch"
+        role="switch"
+        aria-checked={draft.hos}
+        onClick={() => patch({ hos: !draft.hos })}
+      >
+        <span>Hours of service</span>
+        <span className="switch-value">{draft.hos ? "On" : "Off"}</span>
+      </button>
+      <p className="field-hint">30 min break after 8 h driving, 10 h off duty after 11 h. The 14 h window is not modelled.</p>
+      <button type="submit" className="submit" data-testid="plan-submit" disabled={!draftIsValid(errors) || busy}>
+        {busy ? "Planning…" : "Plan routes"}
+      </button>
+      <span className="sr-only" aria-live="polite">
+        {busy ? "Planning routes" : ""}
+      </span>
+    </form>
+  );
+}
