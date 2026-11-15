@@ -70,7 +70,7 @@ describe("App against backend payloads", () => {
   });
 
   it("offers a retry after a network failure", async () => {
-    planRoutes.mockRejectedValueOnce(new ApiError(0, "network_error", "The dispatch service could not be reached."));
+    planRoutes.mockRejectedValueOnce(new ApiError(0, "network_error", "The routing service could not be reached."));
     planRoutes.mockResolvedValue(planSample as unknown as PlanResponse);
     fetchHeatmap.mockResolvedValue(heatmapSample as unknown as HeatmapResponse);
     const user = userEvent.setup();

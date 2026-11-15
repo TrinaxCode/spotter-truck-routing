@@ -5,7 +5,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 maplibregl.setWorkerUrl(workerUrl);
 import type { HeatmapResponse, HeatVariable, PlanResponse } from "../api/types";
 import { corridorFeatures, heatmapFillColor, heatmapFillOpacity, type PaintExpr } from "../lib/heatmap";
-import { formatClock, formatInchesPerHour, formatMiles, formatSpeedMph, formatTempF } from "../lib/format";
+import { formatInchesPerHour, formatMiles, formatShortClock, formatSpeedMph, formatTempF } from "../lib/format";
 import { NEUTRAL_ROUTE_COLOR, riskColor } from "../lib/riskColor";
 import { segmentRoute } from "../lib/routeSegments";
 import { etaHourIndex } from "../lib/time";
@@ -18,13 +18,24 @@ const STYLES = {
   dark: "https://tiles.openfreemap.org/styles/dark",
 } as const;
 
+type Theme = keyof typeof STYLES;
+
 /** Half of a 44 px map pin plus a gap. */
-const PIN_CLEARANCE_PX = 30;
+const PIN_CLEARANCE_PX = 40;
 /**
  * The attribution control is empty until credits load, after the first fit, so its band
  * (a 44 px target on mobile, a 24 px bar plus margins on desktop) is reserved up front.
  */
 const ATTRIBUTION_BAND_PX = 48;
+/** The fit never squeezes the routes into less than this much map on either axis. */
+const MIN_VISIBLE_PX = 160;
+const MOBILE_QUERY = "(max-width: 767px)";
+const FADE_MS = 450;
+/** The light basemap washes colour out less, so the same fill needs a touch less opacity. */
+const HEAT_GAIN: Record<Theme, number> = { light: 0.85, dark: 1 };
+const ACCENT: Record<Theme, string> = { light: "#1d5cf0", dark: "#5b9dff" };
+/** Dark ring under every risk colour keeps each one at >= 3:1 on both basemaps. */
+const CASING = "#0a0f1a";
 
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
@@ -33,8 +44,13 @@ const SEGMENT_SOURCE = "segments";
 const CHECKPOINT_SOURCE = "checkpoints";
 const CORRIDOR_SOURCE = "corridor";
 
+/** Width in px at low and high zoom; MapLibre interpolates between them. */
+function zoomWidth(low: number, high: number): PaintExpr {
+  return ["interpolate", ["linear"], ["zoom"], 3, low, 8, high, 12, high * 1.4];
+}
+
 export interface MapControllerOptions {
-  theme: "light" | "dark";
+  theme: Theme;
   onReady: (handle: MapHandle) => void;
   onInspect: (routeId: string, index: number) => void;
   onSelect: (routeId: string) => void;
@@ -63,25 +79,38 @@ export function noteMapRender(): void {
   ensureProbe().mapRenders += 1;
 }
 
+function element<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  className: string,
+  text?: string,
+): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
+
 export function createMapController(container: HTMLElement, options: MapControllerOptions): MapHandle {
-  const theme = options.theme === "dark" ? "dark" : "light";
+  let theme: Theme = options.theme === "dark" ? "dark" : "light";
   const map = new maplibregl.Map({
     container,
     style: STYLES[theme],
     center: [-100.4, 36.4],
     zoom: 4.1,
-    attributionControl: { compact: true },
+    attributionControl: false,
     dragRotate: false,
     pitchWithRotate: false,
     touchPitch: false,
     fadeDuration: 0,
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false, showZoom: true }), "top-right");
+  // Phones keep the credits bottom-left, away from the zoom buttons, because the sheet leaves little map.
+  const phone = window.matchMedia(MOBILE_QUERY).matches;
+  map.addControl(new maplibregl.AttributionControl({ compact: true }), phone ? "bottom-left" : "bottom-right");
   map.touchZoomRotate.disableRotation();
   // MapLibre opens the compact attribution (compact-show) the first time credits
   // arrive, which covers the route on a short map. Collapse it once, after that.
   const collapseAttrib = () => {
-    if (window.innerWidth > 768) return;
     const el = map.getContainer().querySelector(".maplibregl-ctrl-attrib");
     const inner = el?.querySelector(".maplibregl-ctrl-attrib-inner");
     if (!el || el.classList.contains("maplibregl-attrib-empty") || !inner?.textContent?.trim()) return;
@@ -93,8 +122,7 @@ export function createMapController(container: HTMLElement, options: MapControll
   map.on("sourcedata", collapseAttrib);
   map.on("idle", collapseAttrib);
 
-  const tip = document.createElement("div");
-  tip.className = "map-tip";
+  const tip = element("div", "map-tip");
   tip.hidden = true;
   tip.setAttribute("aria-hidden", "true");
   container.append(tip);
@@ -106,23 +134,43 @@ export function createMapController(container: HTMLElement, options: MapControll
   let autoFramed: PlanResponse | null = null;
   let heat: HeatmapResponse | null = null;
   let selectedId = "";
+  let hoverId = "";
   let hour = 0;
   let variable: HeatVariable = "risk";
   let heatVisible = true;
+  /** 0..1 multiplier on the corridor opacity; eased for the fade-in, constant while sliding. */
+  let gain = 0;
+  let fadeFrame = 0;
+  let fadeTarget = 0;
   const markers: maplibregl.Marker[] = [];
   const hits = new Map<string, CheckpointHit>();
 
-  const resize = new ResizeObserver(() => {
-    if (!alive) return;
-    map.resize();
-    refit();
-  });
+  const overlayNodes = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>("[data-map-overlay]")];
+
+  let layoutFrame = 0;
+  const onLayout = () => {
+    if (!alive || layoutFrame) return;
+    // Overlays resize in bursts (sheet snaps, font swap, list growth); settle once per frame.
+    layoutFrame = requestAnimationFrame(() => {
+      layoutFrame = 0;
+      if (!alive) return;
+      map.resize();
+      publishInsets();
+      refit();
+    });
+  };
+  const resize = new ResizeObserver(onLayout);
   resize.observe(container);
-  const legend = container.parentElement?.querySelector(".legend");
-  if (legend) resize.observe(legend);
+  for (const node of overlayNodes()) resize.observe(node);
   // A gesture hands the camera to the user; programmatic moves carry no originalEvent.
   map.on("movestart", (event) => {
     if (event.originalEvent) autoFramed = null;
+  });
+
+  // The OpenFreeMap dark style references a POI sprite it does not ship; a blank pixel keeps the console clean.
+  map.setMissingStyleImageResolver((id) => {
+    if (!map.hasImage(id)) map.addImage(id, { width: 1, height: 1, data: new Uint8Array(4) });
+    return Promise.resolve();
   });
 
   map.on("error", (event) => {
@@ -180,84 +228,15 @@ export function createMapController(container: HTMLElement, options: MapControll
   }
 
   function installLayers(): void {
-    if (!map.getSource(CORRIDOR_SOURCE)) {
-      map.addSource(CORRIDOR_SOURCE, { type: "geojson", data: EMPTY });
-    }
-    if (!map.getSource(ROUTE_SOURCE)) {
-      map.addSource(ROUTE_SOURCE, { type: "geojson", data: EMPTY });
-    }
-    if (!map.getSource(SEGMENT_SOURCE)) {
-      map.addSource(SEGMENT_SOURCE, { type: "geojson", data: EMPTY });
-    }
-    if (!map.getSource(CHECKPOINT_SOURCE)) {
-      map.addSource(CHECKPOINT_SOURCE, { type: "geojson", data: EMPTY });
+    for (const id of [CORRIDOR_SOURCE, ROUTE_SOURCE, SEGMENT_SOURCE, CHECKPOINT_SOURCE]) {
+      if (!map.getSource(id)) map.addSource(id, { type: "geojson", data: EMPTY });
     }
 
+    // Heatmap, then routes, all under the basemap labels; only checkpoints sit above them.
+    const anchor = labelAnchor();
     const lineLayout = { "line-cap": "round" as const, "line-join": "round" as const };
-    addLayer({
-      id: "routes-other-casing",
-      type: "line",
-      source: ROUTE_SOURCE,
-      paint: { "line-color": "#f7f4ec", "line-width": 7, "line-opacity": 0.95 },
-      layout: lineLayout,
-    });
-    addLayer({
-      id: "routes-other",
-      type: "line",
-      source: ROUTE_SOURCE,
-      paint: { "line-color": NEUTRAL_ROUTE_COLOR, "line-width": 4, "line-opacity": 1 },
-      layout: lineLayout,
-    });
-    addLayer({
-      id: "route-casing",
-      type: "line",
-      source: ROUTE_SOURCE,
-      paint: { "line-color": "#14211b", "line-width": 13, "line-opacity": 0.95 },
-      layout: lineLayout,
-    });
-    // Light halo between the dark casing and the colour: keeps every risk colour, notably the
-    // deep-purple No Travel, at >= 3:1 against its edge on both basemaps.
-    addLayer({
-      id: "route-halo",
-      type: "line",
-      source: ROUTE_SOURCE,
-      paint: { "line-color": "#ffffff", "line-width": 9.5, "line-opacity": 1 },
-      layout: lineLayout,
-    });
-    addLayer({
-      id: "route-selected",
-      type: "line",
-      source: SEGMENT_SOURCE,
-      paint: {
-        "line-color": ["coalesce", ["get", "color"], NEUTRAL_ROUTE_COLOR],
-        "line-width": 6,
-        "line-opacity": 1,
-      },
-      layout: lineLayout,
-    });
-    addLayer({
-      id: "checkpoints",
-      type: "circle",
-      source: CHECKPOINT_SOURCE,
-      paint: {
-        "circle-color": ["coalesce", ["get", "color"], "#5c6b64"],
-        "circle-radius": 7,
-        "circle-stroke-color": "#f7f4ec",
-        "circle-stroke-width": 1.5,
-        "circle-opacity": 0.95,
-      },
-    });
-    addLayer({
-      id: "checkpoint-hit",
-      type: "circle",
-      source: CHECKPOINT_SOURCE,
-      paint: {
-        "circle-color": "#14211b",
-        "circle-radius": 22,
-        "circle-opacity": 0.01,
-        "circle-stroke-width": 0,
-      },
-    });
+    const neutral = NEUTRAL_ROUTE_COLOR[theme];
+    const neutralCasing = theme === "dark" ? CASING : "#ffffff";
     addLayer(
       {
         id: "corridor",
@@ -266,66 +245,246 @@ export function createMapController(container: HTMLElement, options: MapControll
         paint: {
           "fill-color": "rgba(0,0,0,0)",
           "fill-opacity": 0,
-          "fill-outline-color": "rgba(0,0,0,0)",
+          "fill-antialias": false,
         },
       },
-      labelAnchor() ?? "routes-other-casing",
+      anchor,
     );
+    addLayer(
+      {
+        id: "routes-other-casing",
+        type: "line",
+        source: ROUTE_SOURCE,
+        paint: {
+          "line-color": neutralCasing,
+          "line-width": zoomWidth(3.5, 6) as AllPaintProperties["line-width"],
+          "line-opacity": 0.55,
+        },
+        layout: lineLayout,
+      },
+      anchor,
+    );
+    addLayer(
+      {
+        id: "routes-other",
+        type: "line",
+        source: ROUTE_SOURCE,
+        paint: {
+          "line-color": neutral,
+          "line-width": zoomWidth(1.6, 3) as AllPaintProperties["line-width"],
+          "line-opacity": 0.85,
+        },
+        layout: lineLayout,
+      },
+      anchor,
+    );
+    // A wide, invisible twin of the quiet routes: thin lines are hard to hit with a finger.
+    addLayer(
+      {
+        id: "routes-other-hit",
+        type: "line",
+        source: ROUTE_SOURCE,
+        paint: { "line-color": CASING, "line-width": 20, "line-opacity": 0.01 },
+        layout: lineLayout,
+      },
+      anchor,
+    );
+    addLayer(
+      {
+        id: "route-hover",
+        type: "line",
+        source: ROUTE_SOURCE,
+        paint: {
+          "line-color": ACCENT[theme],
+          "line-width": zoomWidth(3.5, 6) as AllPaintProperties["line-width"],
+          "line-opacity": 0.95,
+        },
+        layout: lineLayout,
+        filter: ["==", ["get", "routeId"], ""],
+      },
+      anchor,
+    );
+    addLayer(
+      {
+        id: "route-casing",
+        type: "line",
+        source: ROUTE_SOURCE,
+        paint: {
+          "line-color": CASING,
+          "line-width": zoomWidth(8, 13) as AllPaintProperties["line-width"],
+          "line-opacity": 0.92,
+        },
+        layout: lineLayout,
+      },
+      anchor,
+    );
+    addLayer(
+      {
+        id: "route-selected",
+        type: "line",
+        source: SEGMENT_SOURCE,
+        paint: {
+          "line-color": ["coalesce", ["get", "color"], NEUTRAL_ROUTE_COLOR[theme]],
+          "line-width": zoomWidth(4.5, 8) as AllPaintProperties["line-width"],
+          "line-opacity": 1,
+        },
+        layout: lineLayout,
+      },
+      anchor,
+    );
+    // No Travel is also marked by pattern, never by colour alone.
+    addLayer(
+      {
+        id: "route-halt",
+        type: "line",
+        source: SEGMENT_SOURCE,
+        paint: {
+          "line-color": "#ffffff",
+          "line-width": zoomWidth(1.4, 2.4) as AllPaintProperties["line-width"],
+          "line-opacity": 0.95,
+          "line-dasharray": [0.8, 1.6],
+        },
+        layout: { "line-cap": "butt", "line-join": "round" },
+        filter: ["==", ["get", "level"], 4],
+      },
+      anchor,
+    );
+    addLayer({
+      id: "checkpoints",
+      type: "circle",
+      source: CHECKPOINT_SOURCE,
+      paint: {
+        "circle-color": ["coalesce", ["get", "color"], "#7c8794"],
+        "circle-radius": 4,
+        "circle-stroke-color": theme === "dark" ? CASING : "#ffffff",
+        "circle-stroke-width": 1.5,
+        "circle-opacity": 1,
+        "circle-pitch-alignment": "map",
+      },
+    });
+    addLayer({
+      id: "checkpoint-hit",
+      type: "circle",
+      source: CHECKPOINT_SOURCE,
+      paint: {
+        "circle-color": CASING,
+        "circle-radius": 18,
+        "circle-opacity": 0.01,
+        "circle-stroke-width": 0,
+      },
+    });
   }
 
-  function inSelectedHour(): AllPaintProperties["circle-stroke-width"] {
-    return [
-      "all",
-      ["==", ["get", "routeId"], selectedId],
-      ["==", ["get", "hour"], hour],
-    ] as AllPaintProperties["circle-stroke-width"];
+  /** Checkpoints whose ETA lands in the slider hour. The layer filter already limits this to the selected route. */
+  function inSelectedHour(): PaintExpr {
+    return ["==", ["get", "hour"], hour];
   }
 
   function paintCheckpoints(): void {
     const active = inSelectedHour();
+    const radius = (calm: number, loud: number): PaintExpr => [
+      "case",
+      active,
+      loud,
+      calm,
+    ];
     paint(
       "checkpoints",
-      "circle-opacity",
-      ["case", ["==", ["get", "routeId"], selectedId], 0.98, 0.55] as AllPaintProperties["circle-opacity"],
-    );
-    paint(
-      "checkpoint-hit",
-      "circle-opacity",
-      ["case", ["==", ["get", "routeId"], selectedId], 0.01, 0.01] as AllPaintProperties["circle-opacity"],
+      "circle-radius",
+      [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        3,
+        radius(2.5, 6),
+        7,
+        radius(5, 10),
+        11,
+        radius(8, 14),
+      ] as unknown as AllPaintProperties["circle-radius"],
     );
     paint(
       "checkpoints",
       "circle-stroke-width",
-      ["case", active, 4, 1.5] as AllPaintProperties["circle-stroke-width"],
+      ["case", active, 3.5, 1.5] as unknown as AllPaintProperties["circle-stroke-width"],
     );
     paint(
       "checkpoints",
       "circle-stroke-color",
-      ["case", active, "#f0b429", "#f7f4ec"] as AllPaintProperties["circle-stroke-color"],
+      ["case", active, ACCENT[theme], theme === "dark" ? CASING : "#ffffff"] as unknown as AllPaintProperties["circle-stroke-color"],
     );
-    paint(
-      "checkpoints",
-      "circle-radius",
-      ["case", active, 11, ["==", ["get", "routeId"], selectedId], 7, 5] as AllPaintProperties["circle-radius"],
-    );
+  }
+
+  function applyHover(): void {
+    if (!map.getLayer("route-hover")) return;
+    const active = hoverId && hoverId !== selectedId ? hoverId : "";
+    map.setFilter("route-hover", ["==", ["get", "routeId"], active]);
   }
 
   function applySelection(): void {
     const other: FilterSpecification = ["!=", ["get", "routeId"], selectedId];
     const selected: FilterSpecification = ["==", ["get", "routeId"], selectedId];
-    for (const id of ["routes-other", "routes-other-casing"]) {
+    for (const id of ["routes-other", "routes-other-casing", "routes-other-hit"]) {
       if (map.getLayer(id)) map.setFilter(id, other);
     }
-    for (const id of ["route-selected", "route-halo", "route-casing"]) {
+    for (const id of ["route-selected", "route-casing"]) {
       if (map.getLayer(id)) map.setFilter(id, selected);
     }
+    if (map.getLayer("route-halt")) {
+      map.setFilter("route-halt", ["all", selected, ["==", ["get", "level"], 4]]);
+    }
+    // Only the selected route shows checkpoints; the others stay quiet until picked.
+    for (const id of ["checkpoints", "checkpoint-hit"]) {
+      if (map.getLayer(id)) map.setFilter(id, selected);
+    }
+    applyHover();
     paintCheckpoints();
+  }
+
+  function desiredGain(): number {
+    return heatVisible && heat != null ? HEAT_GAIN[theme] : 0;
+  }
+
+  function applyOpacity(): void {
+    // Visibility is carried by `gain`, so hiding the heatmap fades instead of cutting.
+    const opacity = heatmapFillOpacity(variable, hour, heat != null, gain);
+    paint("corridor", "fill-opacity", opacity as AllPaintProperties["fill-opacity"]);
+  }
+
+  /** Eases the corridor opacity to its target. Reduced motion jumps. Never runs while sliding. */
+  function easeGain(target: number): void {
+    cancelAnimationFrame(fadeFrame);
+    fadeFrame = 0;
+    fadeTarget = target;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || Math.abs(target - gain) < 0.001) {
+      gain = target;
+      applyOpacity();
+      return;
+    }
+    const from = gain;
+    const started = performance.now();
+    const step = (now: number) => {
+      if (!alive) return;
+      const t = Math.min(1, (now - started) / FADE_MS);
+      const eased = 1 - (1 - t) ** 3;
+      gain = from + (target - from) * eased;
+      applyOpacity();
+      fadeFrame = t < 1 ? requestAnimationFrame(step) : 0;
+    };
+    fadeFrame = requestAnimationFrame(step);
   }
 
   function applyFrame(): void {
     paintExpr("corridor", "fill-color", heatmapFillColor(variable, hour));
-    const opacity = heatmapFillOpacity(variable, hour, heatVisible && heat != null);
-    paint("corridor", "fill-opacity", opacity as AllPaintProperties["fill-opacity"]);
+    const target = desiredGain();
+    if (fadeFrame !== 0 && target === fadeTarget) {
+      // A fade toward this target is running and repaints the opacity every frame.
+    } else if (Math.abs(target - gain) > 0.001) {
+      easeGain(target);
+    } else {
+      applyOpacity();
+    }
     paintCheckpoints();
   }
 
@@ -378,8 +537,9 @@ export function createMapController(container: HTMLElement, options: MapControll
             index: checkpoint.index,
             hour: startIso ? etaHourIndex(startIso, checkpoint.eta) : -1,
             color: riskColor(checkpoint.level),
+            level: checkpoint.level ?? -1,
             mile: formatMiles(checkpoint.mile),
-            eta: formatClock(checkpoint.eta),
+            eta: formatShortClock(checkpoint.eta),
             levelLabel: checkpoint.level_label || "Unknown",
             wind: weather ? formatSpeedMph(weather.wind_mph) : "Missing",
             gust: weather ? formatSpeedMph(weather.gust_mph) : "Missing",
@@ -398,21 +558,21 @@ export function createMapController(container: HTMLElement, options: MapControll
   function syncMarkers(next: PlanResponse): void {
     for (const marker of markers) marker.remove();
     markers.length = 0;
-    const pins: { kind: "Start" | "End"; label: string; lon: number; lat: number }[] = [
-      { kind: "Start", label: next.request.origin.label, lon: next.request.origin.lon, lat: next.request.origin.lat },
+    const pins: { kind: "start" | "end"; label: string; lon: number; lat: number }[] = [
+      { kind: "start", label: next.request.origin.label, lon: next.request.origin.lon, lat: next.request.origin.lat },
       {
-        kind: "End",
+        kind: "end",
         label: next.request.destination.label,
         lon: next.request.destination.lon,
         lat: next.request.destination.lat,
       },
     ];
     for (const pin of pins) {
-      const button = document.createElement("button");
+      // A 44 px target around a 20 px mark: touch-sized without a heavy marker.
+      const button = element("button", `map-pin map-pin-${pin.kind}`);
       button.type = "button";
-      button.className = pin.kind === "Start" ? "map-pin map-pin-start" : "map-pin map-pin-end";
-      button.textContent = pin.kind;
-      button.setAttribute("aria-label", `${pin.kind === "Start" ? "Origin" : "Destination"}, ${pin.label}`);
+      button.append(element("span", "pin-mark"));
+      button.setAttribute("aria-label", `${pin.kind === "start" ? "Origin" : "Destination"}, ${pin.label}`);
       const marker = new maplibregl.Marker({ element: button, anchor: "center" })
         .setLngLat([pin.lon, pin.lat])
         .addTo(map);
@@ -420,40 +580,87 @@ export function createMapController(container: HTMLElement, options: MapControll
     }
   }
 
-  /**
-   * Padding that keeps the 44 px Start/End pins (and the route) clear of everything laid over
-   * the map: the legend and MapLibre's zoom/attribution controls. Measured, because the legend
-   * wraps differently at every width.
-   */
-  function overlayPadding(): maplibregl.PaddingOptions {
-    const clearance = PIN_CLEARANCE_PX;
-    const area = container.getBoundingClientRect();
-    const padding = {
-      top: clearance,
-      right: clearance,
-      bottom: ATTRIBUTION_BAND_PX + clearance,
-      left: clearance,
-    };
-    const overlays = [
-      ...(container.parentElement?.querySelectorAll(".legend") ?? []),
-      ...container.querySelectorAll(".maplibregl-ctrl-top-right"),
-    ];
-    for (const overlay of overlays) {
-      const box = overlay.getBoundingClientRect();
-      if (box.width === 0 || box.height === 0) continue;
-      // Wide boxes (legend, attribution) claim a horizontal band, tall ones (zoom) a vertical one.
-      if (box.width >= box.height) {
-        if (box.top - area.top < area.bottom - box.bottom) {
-          padding.top = Math.max(padding.top, box.bottom - area.top + clearance);
-        } else {
-          padding.bottom = Math.max(padding.bottom, area.bottom - box.top + clearance);
-        }
-      } else if (box.left - area.left < area.right - box.right) {
-        padding.left = Math.max(padding.left, box.right - area.left + clearance);
-      } else {
-        padding.right = Math.max(padding.right, area.right - box.left + clearance);
+  type Edge = "top" | "right" | "bottom" | "left";
+
+  /** Where an overlay docks. The trip panel is a side card on desktop and a bottom sheet on phones. */
+  function overlayEdge(node: HTMLElement): Edge | null {
+    const mobile = window.matchMedia(MOBILE_QUERY).matches;
+    const edge = (mobile ? node.dataset.overlayEdgeMobile : undefined) ?? node.dataset.overlayEdge;
+    return edge === "top" || edge === "right" || edge === "bottom" || edge === "left" ? edge : null;
+  }
+
+  interface Placed {
+    edge: Edge;
+    box: DOMRect;
+  }
+
+  function placedOverlays(): Placed[] {
+    const placed: Placed[] = [];
+    for (const node of overlayNodes()) {
+      const edge = overlayEdge(node);
+      const box = node.getBoundingClientRect();
+      if (edge && box.width > 0 && box.height > 0) placed.push({ edge, box });
+    }
+    // MapLibre's own controls: zoom at top right, attribution at bottom right.
+    for (const [selector, edge] of [
+      [".maplibregl-ctrl-top-right", "right"],
+      [".maplibregl-ctrl-bottom-right", "bottom"],
+      [".maplibregl-ctrl-bottom-left", "bottom"],
+    ] as const) {
+      for (const node of container.querySelectorAll(selector)) {
+        const box = node.getBoundingClientRect();
+        if (box.width > 0 && box.height > 0) placed.push({ edge, box });
       }
     }
+    return placed;
+  }
+
+  /** Lifts the attribution above any docked card it would otherwise sit under. */
+  function publishInsets(): void {
+    const area = container.getBoundingClientRect();
+    let right = 0;
+    let left = 0;
+    for (const node of overlayNodes()) {
+      if (overlayEdge(node) !== "bottom") continue;
+      const box = node.getBoundingClientRect();
+      if (box.width === 0 || box.height === 0) continue;
+      // Only cards that reach a bottom corner (the credits open about 340 px wide) can cover the attribution.
+      const lift = area.bottom - box.top;
+      if (box.right >= area.right - 340) right = Math.max(right, lift);
+      if (box.left <= area.left + 340) left = Math.max(left, lift);
+    }
+    container.style.setProperty("--inset-bottom-right", `${Math.round(right)}px`);
+    container.style.setProperty("--inset-bottom-left", `${Math.round(left)}px`);
+  }
+
+  /**
+   * Padding that keeps the 44 px Start/End pins (and the route) clear of everything laid over
+   * the map: the trip panel, the timeline, the legend and MapLibre's zoom/attribution controls.
+   * Measured, because the panels resize with content and every breakpoint lays them out differently.
+   */
+  function overlayPadding(): maplibregl.PaddingOptions {
+    const area = container.getBoundingClientRect();
+    const padding = {
+      top: PIN_CLEARANCE_PX,
+      right: PIN_CLEARANCE_PX,
+      bottom: ATTRIBUTION_BAND_PX + PIN_CLEARANCE_PX,
+      left: PIN_CLEARANCE_PX,
+    };
+    for (const { edge, box } of placedOverlays()) {
+      if (edge === "top") padding.top = Math.max(padding.top, box.bottom - area.top + PIN_CLEARANCE_PX);
+      else if (edge === "bottom") padding.bottom = Math.max(padding.bottom, area.bottom - box.top + PIN_CLEARANCE_PX);
+      else if (edge === "left") padding.left = Math.max(padding.left, box.right - area.left + PIN_CLEARANCE_PX);
+      else padding.right = Math.max(padding.right, area.right - box.left + PIN_CLEARANCE_PX);
+    }
+    // Never ask for more padding than the map can give; keep a strip the routes can fill.
+    const room = (size: number, a: number, b: number): [number, number] => {
+      const free = Math.max(0, size - MIN_VISIBLE_PX);
+      if (a + b <= free || a + b === 0) return [a, b];
+      const k = free / (a + b);
+      return [a * k, b * k];
+    };
+    [padding.left, padding.right] = room(area.width, padding.left, padding.right);
+    [padding.top, padding.bottom] = room(area.height, padding.top, padding.bottom);
     return padding;
   }
 
@@ -468,10 +675,11 @@ export function createMapController(container: HTMLElement, options: MapControll
     autoFramed = next;
     // The ResizeObserver is async; frame against the box the padding was just measured in.
     map.resize();
+    publishInsets();
     map.fitBounds(bounds, { padding: overlayPadding(), duration: animate && !reduce ? 500 : 0, maxZoom: 8 });
   }
 
-  /** The legend wraps once the web font arrives and the sheet changes the map height. */
+  /** Panels wrap and resize once the web font arrives or the sheet changes snap. */
   function refit(): void {
     if (alive && styled && plan && autoFramed === plan) fit(plan, false);
   }
@@ -492,6 +700,8 @@ export function createMapController(container: HTMLElement, options: MapControll
     if (plan) {
       writeSource(CHECKPOINT_SOURCE, checkpointCollection(plan, heat?.start ?? plan.routes[0]?.departure ?? null));
     }
+    // New data fades in from clear instead of popping on.
+    gain = 0;
     applyFrame();
   }
 
@@ -504,7 +714,13 @@ export function createMapController(container: HTMLElement, options: MapControll
       syncMarkers(plan);
       applySelection();
     }
-    if (heat) writeSource(CORRIDOR_SOURCE, corridorFeatures(heat));
+    if (heat) {
+      writeSource(CORRIDOR_SOURCE, corridorFeatures(heat));
+      }
+    // A theme change redraws a finished corridor; it does not replay the fade.
+    cancelAnimationFrame(fadeFrame);
+    fadeFrame = 0;
+    gain = desiredGain();
     applyFrame();
   }
 
@@ -526,7 +742,7 @@ export function createMapController(container: HTMLElement, options: MapControll
     if (typeof routeId === "string") options.onSelect(routeId);
   }
 
-  for (const layerId of ["routes-other", "routes-other-casing", "route-selected", "route-halo", "route-casing"]) {
+  for (const layerId of ["routes-other-hit", "routes-other", "route-selected", "route-casing"]) {
     map.on("click", layerId, selectRoute);
     map.on("mouseenter", layerId, () => {
       map.getCanvas().style.cursor = "pointer";
@@ -536,6 +752,19 @@ export function createMapController(container: HTMLElement, options: MapControll
     });
   }
 
+  // Pointing at a quiet route lights it up, the same highlight a hovered card gives.
+  map.on("mousemove", "routes-other-hit", (event) => {
+    const routeId = event.features?.[0]?.properties?.routeId;
+    if (typeof routeId === "string" && routeId !== hoverId) {
+      hoverId = routeId;
+      applyHover();
+    }
+  });
+  map.on("mouseleave", "routes-other-hit", () => {
+    hoverId = "";
+    applyHover();
+  });
+
   map.on("click", "checkpoint-hit", (event) => {
     const feature = event.features?.[0];
     const routeId = feature?.properties?.routeId;
@@ -543,15 +772,35 @@ export function createMapController(container: HTMLElement, options: MapControll
     if (typeof routeId === "string" && index != null) options.onInspect(routeId, Number(index));
   });
 
+  function fillTip(props: Record<string, unknown>): void {
+    const level = Number(props.level);
+    const head = element("div", "tip-head");
+    const dot = element("span", "tip-dot");
+    dot.style.background = String(props.color ?? "#7c8794");
+    head.append(dot, element("strong", "", String(props.mile)), element("span", "tip-level", String(props.levelLabel)));
+    const eta = element("div", "tip-eta", `ETA ${props.eta}`);
+    const wx = element(
+      "div",
+      "tip-wx",
+      `Wind ${props.wind} · Gust ${props.gust} · Rain ${props.rain} · Snow ${props.snow} · ${props.temp}`,
+    );
+    tip.replaceChildren(head, eta, wx);
+    if (props.reasons && level > 0) tip.append(element("div", "tip-why", String(props.reasons)));
+  }
+
   map.on("mousemove", "checkpoint-hit", (event) => {
-    const feature = event.features?.[0];
-    const props = feature?.properties;
+    const props = event.features?.[0]?.properties;
     if (!props) return;
     map.getCanvas().style.cursor = "pointer";
-    const reasons = props.reasons ? String(props.reasons) : "No elevated risk";
+    fillTip(props);
     tip.hidden = false;
-    tip.textContent = `${props.mile} · ${props.levelLabel} · ETA ${props.eta}. Wind ${props.wind}, gust ${props.gust}, rain ${props.rain}, snow ${props.snow}, ${props.temp}. ${reasons}`;
-    tip.style.transform = `translate(${event.point.x + 14}px, ${event.point.y + 14}px)`;
+    // Keep the card inside the map: flip to the left/top of the pointer near the far edges.
+    const area = container.getBoundingClientRect();
+    const flipX = event.point.x + 16 + tip.offsetWidth > area.width;
+    const flipY = event.point.y + 16 + tip.offsetHeight > area.height;
+    const x = flipX ? event.point.x - 16 - tip.offsetWidth : event.point.x + 16;
+    const y = flipY ? event.point.y - 16 - tip.offsetHeight : event.point.y + 16;
+    tip.style.transform = `translate(${Math.max(8, x)}px, ${Math.max(8, y)}px)`;
   });
 
   map.on("mouseleave", "checkpoint-hit", () => {
@@ -564,6 +813,7 @@ export function createMapController(container: HTMLElement, options: MapControll
       if (!alive) return;
       plan = next;
       selectedId = next.recommended_route_id;
+      hoverId = "";
       // The previous corridor belongs to the previous trip; drop it until the new one arrives.
       const stale = heat !== null;
       heat = null;
@@ -571,6 +821,9 @@ export function createMapController(container: HTMLElement, options: MapControll
       applyPlan();
       if (stale) {
         writeSource(CORRIDOR_SOURCE, EMPTY);
+        cancelAnimationFrame(fadeFrame);
+        fadeFrame = 0;
+        gain = 0;
         applyFrame();
       }
     },
@@ -579,6 +832,11 @@ export function createMapController(container: HTMLElement, options: MapControll
       selectedId = routeId;
       if (!styled) return;
       applySelection();
+    },
+    setHover(routeId) {
+      if (!alive) return;
+      hoverId = routeId ?? "";
+      if (styled) applyHover();
     },
     setHeatmap(data) {
       if (!alive) return;
@@ -595,19 +853,27 @@ export function createMapController(container: HTMLElement, options: MapControll
       applyFrame();
     },
     setBasemap(nextTheme) {
-      map.setStyle(STYLES[nextTheme === "dark" ? "dark" : "light"]);
+      theme = nextTheme === "dark" ? "dark" : "light";
+      map.setStyle(STYLES[theme]);
     },
     showCheckpoint(routeId, index) {
       const hit = hits.get(`${routeId}:${index}`);
       options.onInspect(routeId, index);
       if (!hit || !styled) return;
       autoFramed = null;
-      const camera = { center: [hit.lon, hit.lat] as [number, number], zoom: Math.max(map.getZoom(), 6) };
+      // Centre in the part of the map no panel covers.
+      const camera = {
+        center: [hit.lon, hit.lat] as [number, number],
+        zoom: Math.max(map.getZoom(), 6),
+        padding: overlayPadding(),
+      };
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) map.jumpTo(camera);
       else map.easeTo({ ...camera, duration: 400 });
     },
     destroy() {
       alive = false;
+      cancelAnimationFrame(fadeFrame);
+      cancelAnimationFrame(layoutFrame);
       resize.disconnect();
       for (const marker of markers) marker.remove();
       map.remove();

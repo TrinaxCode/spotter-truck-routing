@@ -14,6 +14,7 @@ export default tseslint.config(
       "test-results/**",
       "blob-report/**",
       "scripts/**",
+      "design-shots/**",
       "coverage/**",
     ],
   },

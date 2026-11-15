@@ -53,7 +53,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       });
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") throw error;
-      throw new ApiError(0, "network_error", "The dispatch service could not be reached.");
+      throw new ApiError(0, "network_error", "The routing service could not be reached.");
     }
     if (!response.ok) {
       // Proxies and crashes can answer with HTML or a bare `{detail}`; never assume the envelope.
@@ -74,7 +74,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return (await response.json()) as T;
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") throw error;
-      throw new ApiError(response.status, "invalid_response", "The dispatch service sent an unreadable reply.");
+      throw new ApiError(response.status, "invalid_response", "The routing service sent an unreadable reply.");
     }
   }
 

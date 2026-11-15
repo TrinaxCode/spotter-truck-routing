@@ -6,10 +6,11 @@ import { CheckpointDialog } from "./components/CheckpointDialog";
 import { HeatmapBar } from "./components/HeatmapBar";
 import { PlanForm } from "./components/PlanForm";
 import { RouteList } from "./components/RouteList";
-import { EmptyState, ErrorNote, Legend, MapSkeleton, RouteSkeleton } from "./components/States";
+import { EmptyState, ErrorNote, MapSkeleton, RouteSkeleton } from "./components/States";
 import { TripSheet } from "./components/TripSheet";
 import { TripSummary } from "./components/TripSummary";
 import { draftToRequest, type FieldErrors, type TripDraft } from "./lib/form";
+import { shortPlace } from "./lib/format";
 import type { MapHandle } from "./map/handle";
 
 const MapCanvas = lazy(() => import("./map/MapCanvas").then((module) => ({ default: module.MapCanvas })));
@@ -53,6 +54,7 @@ export function App() {
   const [heatStart, setHeatStart] = useState<string | null>(null);
   const [inspect, setInspect] = useState<{ route: RouteOption; checkpoint: Checkpoint } | null>(null);
   const [submitted, setSubmitted] = useState<TripDraft | null>(null);
+  const [pending, setPending] = useState<TripDraft | null>(null);
   const [editing, setEditing] = useState(true);
   const [theme, setTheme] = useState<"light" | "dark">(() =>
     document.documentElement.dataset.theme === "dark" ? "dark" : "light",
@@ -110,6 +112,7 @@ export function App() {
     const controller = new AbortController();
     abortRef.current = controller;
     draftRef.current = draft;
+    setPending(draft);
     setStatus("loading");
     setPlanError("");
     setPlanRetryable(true);
@@ -121,6 +124,7 @@ export function App() {
       const next = await api.planRoutes(draftToRequest(draft), controller.signal);
       if (controller.signal.aborted) return;
       rememberPlan(next);
+      setPending(null);
       setSelectedId(next.recommended_route_id);
       setSubmitted(draft);
       setEditing(false);
@@ -130,8 +134,9 @@ export function App() {
       void loadHeat(next.plan_id);
     } catch (error) {
       if (controller.signal.aborted || (error instanceof DOMException && error.name === "AbortError")) return;
+      setPending(null);
       setStatus("error");
-      setPlanError(describeApiError(error, "The dispatch service could not be reached."));
+      setPlanError(describeApiError(error, "The routing service could not be reached."));
       setPlanRetryable(isRetryable(error));
       setServerErrors(fieldErrors(error instanceof ApiError ? error.fields : undefined));
     }
@@ -146,6 +151,15 @@ export function App() {
 
   // Swapping the form for the results (or back) removes the focused control; hand focus on.
   useEffect(() => {
+    // While planning the form gives way to a progress card; after a failure the form comes back.
+    if (status === "loading") {
+      document.getElementById("plan-progress")?.focus({ preventScroll: true });
+      return;
+    }
+    if (status === "error") {
+      document.querySelector<HTMLElement>('[data-testid="plan-submit"]')?.focus({ preventScroll: true });
+      return;
+    }
     if (status !== "ready") return;
     const active = document.activeElement;
     const lost = !active || active === document.body || active.closest("[hidden]") !== null;
@@ -161,39 +175,37 @@ export function App() {
     }
   }, [status, editing, plan?.plan_id]);
 
+  const hoverRoute = useCallback((routeId: string | null) => {
+    mapRef.current?.setHover(routeId);
+  }, []);
+
+  // The phone dock (sheet + timeline) publishes its height so the checkpoint card can sit above it.
+  const dockRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = dockRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const publish = () => document.documentElement.style.setProperty("--dock-h", `${node.offsetHeight}px`);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   const selectRoute = useCallback((routeId: string) => {
     setSelectedId(routeId);
     queued.current.selected = routeId;
     mapRef.current?.setSelected(routeId);
   }, []);
 
+  const title = submitted && status === "ready"
+    ? `${shortPlace(submitted.origin?.label ?? "Origin")} → ${shortPlace(submitted.destination?.label ?? "Destination")}`
+    : "Plan a trip";
+
   return (
-    <div className="shell min-h-dvh font-sans">
+    <div className="app font-sans">
       <a className="skip" href="#trip-panel">
         Skip to trip planner
       </a>
-      <header className="mast">
-        <div className="brand">
-          <p className="mark">Spotter</p>
-          <h1>Dispatch</h1>
-        </div>
-        <div className="mast-actions">
-          {mocks && <p className="demo-badge">Demo data</p>}
-          <button
-            type="button"
-            aria-pressed={theme === "dark"}
-            onClick={() => {
-              const next = theme === "dark" ? "light" : "dark";
-              document.documentElement.dataset.theme = next;
-              localStorage.setItem("spotter-theme", next);
-              setTheme(next);
-              mapRef.current?.setBasemap(next);
-            }}
-          >
-            Dark map
-          </button>
-        </div>
-      </header>
       <p className="sr-only" role="status">
         {status === "ready" && plan
           ? `${plan.routes.length} routes scored. Top pick: ${
@@ -201,12 +213,45 @@ export function App() {
             }.`
           : ""}
       </p>
-      <div className="stage">
-        <TripSheet>
+      <div className="map-stage">
+        <Suspense fallback={<MapSkeleton />}>
+          <MapCanvas onReady={onReady} onInspect={openCheckpoint} onSelect={selectRoute} />
+        </Suspense>
+      </div>
+      <header className="mast" data-map-overlay="" data-overlay-edge="left" data-overlay-edge-mobile="top">
+        <h1>Headwind</h1>
+        <div className="mast-actions">
+          {mocks && <p className="demo-badge">Demo data</p>}
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Dark theme"
+            aria-pressed={theme === "dark"}
+            title={theme === "dark" ? "Switch to the light theme" : "Switch to the dark theme"}
+            onClick={() => {
+              const next = theme === "dark" ? "light" : "dark";
+              document.documentElement.dataset.theme = next;
+              try {
+                localStorage.setItem("headwind-theme", next);
+              } catch {
+                // Storage can be blocked; the theme still applies for this visit.
+              }
+              setTheme(next);
+              mapRef.current?.setBasemap(next);
+            }}
+          >
+            {theme === "dark" ? <MoonIcon /> : <SunIcon />}
+          </button>
+        </div>
+      </header>
+      <div ref={dockRef} className="dock">
+        <TripSheet title={title} settleKey={status === "ready" ? plan?.plan_id : null}>
+          {status === "empty" && <EmptyState />}
           {submitted && status === "ready" && !editing && (
             <TripSummary draft={submitted} onEdit={() => setEditing(true)} />
           )}
-          <div hidden={status === "ready" && !editing}>
+          {status === "loading" && pending && <TripSummary draft={pending} busy />}
+          <div hidden={status === "loading" || (status === "ready" && !editing)}>
             <PlanForm
               busy={status === "loading"}
               serverErrors={serverErrors}
@@ -216,7 +261,6 @@ export function App() {
               }}
             />
           </div>
-          {status === "empty" && <EmptyState />}
           {status === "loading" && <RouteSkeleton />}
           {status === "error" && (
             <ErrorNote
@@ -235,6 +279,7 @@ export function App() {
               plan={plan}
               selectedId={selectedId ?? plan.recommended_route_id}
               onSelect={selectRoute}
+              onHover={hoverRoute}
               onInspect={(routeId, index) => {
                 openCheckpoint(routeId, index);
                 mapRef.current?.showCheckpoint(routeId, index);
@@ -242,30 +287,48 @@ export function App() {
             />
           )}
         </TripSheet>
-        <div className="map-stage">
-          <Suspense fallback={<MapSkeleton />}>
-            <MapCanvas onReady={onReady} onInspect={openCheckpoint} onSelect={selectRoute} />
-          </Suspense>
-          <Legend />
-          {inspect && (
-            <CheckpointDialog
-              route={inspect.route}
-              checkpoint={inspect.checkpoint}
-              onClose={closeInspect}
-            />
-          )}
-        </div>
+        <HeatmapBar
+          key={heatStart ?? "idle"}
+          startIso={heatStart}
+          status={heatStatus}
+          error={heatError}
+          onRetry={() => {
+            if (plan) void loadHeat(plan.plan_id);
+          }}
+          onFrame={onFrame}
+        />
       </div>
-      <HeatmapBar
-        key={heatStart ?? "idle"}
-        startIso={heatStart}
-        status={heatStatus}
-        error={heatError}
-        onRetry={() => {
-          if (plan) void loadHeat(plan.plan_id);
-        }}
-        onFrame={onFrame}
-      />
+      {inspect && (
+        <CheckpointDialog route={inspect.route} checkpoint={inspect.checkpoint} onClose={closeInspect} />
+      )}
     </div>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <circle cx="9" cy="9" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <path
+        d="M15.2 10.6A6.6 6.6 0 0 1 7.4 2.8a6.6 6.6 0 1 0 7.8 7.8z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

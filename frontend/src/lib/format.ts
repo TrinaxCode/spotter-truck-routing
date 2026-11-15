@@ -79,9 +79,32 @@ const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short" });
 
 /** "Sun 3:00 PM (+5 h)" in the viewer's local zone. */
 export function formatFrameLabel(startIso: string, hour: number): string {
+  return `${formatFrameTime(startIso, hour)} (+${hour} h)`;
+}
+
+/** "Sun 3:00 PM" in the viewer's local zone. */
+export function formatFrameTime(startIso: string, hour: number): string {
   const date = new Date(Date.parse(startIso) + hour * 3_600_000);
   if (Number.isNaN(date.getTime())) return "Unknown time";
-  return `${frameClock.format(date).replace(",", "")} (+${hour} h)`;
+  return frameClock.format(date).replace(",", "");
+}
+
+/** "At departure" or "+18 h from departure". */
+export function formatFrameOffset(hour: number): string {
+  return hour === 0 ? "At departure" : `+${hour} h from departure`;
+}
+
+const shortClock = new Intl.DateTimeFormat("en-US", {
+  weekday: "short",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+/** "Tue 12:30 PM" for arrivals and ETAs. */
+export function formatShortClock(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+  return shortClock.format(date).replace(",", "");
 }
 
 export interface ForecastTick {

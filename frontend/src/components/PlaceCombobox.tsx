@@ -109,7 +109,7 @@ export function PlaceCombobox({ id, label, value, onChange, search, error, onBlu
   }
 
   return (
-    <div className="field">
+    <div className="field field-place" data-place={id}>
       <label htmlFor={id}>{label}</label>
       <input
         id={id}

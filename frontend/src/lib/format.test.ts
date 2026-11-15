@@ -10,7 +10,7 @@ import {
   formatTripSummary,
   parseLoadLbs,
 } from "./format";
-import { RISK_COLORS, riskColor, riskLabel } from "./riskColor";
+import { RISK_COLORS, UNKNOWN_COLOR, riskColor, riskLabel } from "./riskColor";
 import { departureError, nextFullHourInput } from "./time";
 
 describe("format", () => {
@@ -58,8 +58,8 @@ describe("format", () => {
 describe("risk palette", () => {
   it("maps levels to the shared palette", () => {
     expect(riskColor(0)).toBe(RISK_COLORS[0]);
-    expect(riskColor(4)).toBe("#4c1d78");
-    expect(riskColor(null)).toBe("#5c6b64");
+    expect(riskColor(4)).toBe("#c026d3");
+    expect(riskColor(null)).toBe(UNKNOWN_COLOR);
     expect(riskLabel(3)).toBe("Severe");
     expect(riskLabel(null)).toBe("Unknown");
   });

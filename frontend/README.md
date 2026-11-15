@@ -1,4 +1,4 @@
-# Spotter dispatch console
+# Headwind
 
 Weather-aware truck routing UI. The page plans three routes, colors the selected route by checkpoint risk, and plays a 49-hour corridor forecast.
 
@@ -32,7 +32,7 @@ The form starts on Dallas, TX to Denver, CO, 35,000 lb, 25 mile spacing, hours o
 - `npm run typecheck` — `tsc --noEmit`
 - `npm run lint` — ESLint flat config
 - `npm run test` — Vitest
-- `npm run e2e` — Playwright (starts Vite with mocks on port 4173)
+- `npm run e2e` — Playwright (starts Vite with mocks on port 4173; set `E2E_PORT` when that port is taken)
 - `npm run fixtures` — regenerate `src/mocks/*.json` from the mock-only risk, HOS, and weather-field modules in `src/mocks/`
 
 ## Map and forecast
@@ -41,11 +41,23 @@ The map module is loaded with `React.lazy` after the shell. `MapCanvas` does not
 
 Each corridor cell is one GeoJSON polygon. The 49 hourly values live on the feature as `risk`, `wind`, `rain`, and `snow` arrays. The hour is a literal index in an `at` expression (`['at', hour, ['get', variable]]`). Sliding does not call `setData`, does not fetch again, and does not re-render the map component. In dev, `window.__spotter` counts `sourceUpdates`, `paintUpdates`, `mapRenders`, and `frame` so the Playwright test can check that.
 
-Basemap: OpenFreeMap Positron in light mode and OpenFreeMap Dark in dark mode. Theme is stored in `localStorage` (`spotter-theme`). Changing theme calls `setStyle` and restores sources. That path is not the slider path.
+Basemap: OpenFreeMap Dark by default and OpenFreeMap Positron in the light theme. The theme is dark unless the system asks for light or the driver picked one with the toggle (`localStorage` key `headwind-theme`). Changing theme calls `setStyle` and restores sources. That path is not the slider path.
 
-Framing: `fitBounds` pads by the measured size of the legend and zoom control plus a 44 px pin
-radius, so the Start/End pins stay clear of them (Playwright checks 375, 768 and 1280 px). The
-map re-frames on legend/map resizes until the user moves it.
+## Design
+
+A full-bleed map with floating panels. Tokens (colour, type scale 12/13/15/20/28, radii, shadows) are CSS variables in `src/index.css`, dark first with a `[data-theme="light"]` override. Type is Geist (variable, self-hosted through `@fontsource-variable/geist`, `font-display: swap`) with tabular numerals everywhere.
+
+- Desktop (1024 px and up): a 392 px trip panel on the left (form, then a trip chip, the recommendation and the route cards) and a timeline card centred in the rest of the map, with the legend docked above it.
+- Tablet (768 to 1023 px): a 340 px panel; the timeline spans the bottom.
+- Phone (up to 767 px): the map fills the screen. A bottom dock holds the trip sheet (collapsed, half, expanded; tap, swipe or use the handle button) with the timeline pinned under it.
+- Risk colours are one palette for both themes (`src/lib/riskColor.ts`, mirrored by the `--low` to `--halt` tokens). Route lines carry a dark casing so each colour keeps 3:1 on both basemaps; No Travel is also dashed on the map and hatched in bars and legends.
+- Heatmap: Risk keeps the five levels. Wind, Rain and Snow use continuous colour and opacity ramps (`RAMPS` in `src/lib/heatmap.ts`) and the legend shows the same ramp with units. The fill fades in when data arrives (skipped under `prefers-reduced-motion`).
+- Only the selected route shows checkpoints; the quiet routes are thin, neutral and still clickable. Hovering a route card lights that route on the map (a layer filter change, no source update).
+- The large panel is a plain translucent surface; backdrop blur is limited to the small cards (timeline, legend, mast, zoom) so repaints stay cheap while sliding.
+
+Review screenshots (mock mode, both themes, three sizes) are generated into `design-shots/`, which is git-ignored.
+
+Framing: `fitBounds` pads by the measured size of every element marked `data-map-overlay` (trip panel, timeline, legend) and MapLibre's own controls, so the Start/End pins stay clear of them (Playwright checks 375, 768 and 1280 px). The map re-frames when those resize until the user moves it.
 
 ## API contract
 
