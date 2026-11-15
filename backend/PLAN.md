@@ -22,3 +22,22 @@ cache. DRF validates input and maps typed service errors to the JSON API contrac
 Acceptance: every risk/load boundary and ranking criterion pinned; no live HTTP
 in tests; 49 heatmap frames with at most 300 cells; missing weather remains unknown;
 all upstream errors sanitized; keyless planning returns 503; no fake routes.
+
+## SPEC §12.1 — Departure options
+
+Implement inline in the assigned backend; do not commit or edit frontend except the
+new contract sample. Root README gets only the two explicitly requested additions.
+
+1. Add failing departure tests: 25 offsets, exact offset-zero plan scores, shifted
+   checkpoint ETAs including HOS and subsecond precision, missing forecasts, validation,
+   404, one deduplicated weather fetch, no routing, cache reuse and plan expiry.
+2. Persist private ETA offsets and expiry in `planner.py` without changing the public
+   plan payload. Implement `departures.py` using the existing weather/risk/owned-mile/
+   scoring/ranking functions; compare `ranking_key(score)[:-1]`, earliest tie, strict
+   improvement only. Headline priority: No Travel, Severe, High, average risk.
+3. Register the serializer/view/URL, run the departure tests, extend the existing
+   contract test and write only `backend-departures.sample.json` with WRITE_SAMPLES=1.
+4. Measure 25 × 3 × 300 checkpoint scoring with a full 408-hour forecast and mocked
+   provider boundary; document API, fixed-traffic assumption and measured evidence.
+5. Run full pytest/Ruff; start a private `runserver 8002 --noreload`, plan Dallas→Denver,
+   time the new endpoint and inspect its suggestion, then stop only that server.

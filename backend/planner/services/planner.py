@@ -13,6 +13,8 @@ from .routing import Route, get_routes
 from .sampling import owned_miles, sample_checkpoints, simplify
 from .weather import fetch_forecasts, rounded_coord, select_weather
 
+PLAN_TTL_S = 6 * 3600
+
 
 def serialize_breaks(route: Route, departure, enabled: bool) -> list[dict]:
     breaks = []
@@ -36,13 +38,16 @@ def create_plan(data: dict) -> dict:
                    for route in routes]
     forecasts = fetch_forecasts([(p.lon, p.lat) for points in checkpoints for p in points])
     serialized, scores = [], []
+    eta_offsets = {}
     for index, (route, points) in enumerate(zip(routes, checkpoints, strict=True)):
         route_id = f"r{index + 1}"
         total_time = elapsed_with_breaks(route.drive_time_s, hos)
         evaluated, levels = [], []
+        eta_offsets[route_id] = []
         for point in points:
-            eta = departure + timedelta(seconds=elapsed_with_breaks(
-                route.drive_seconds_at(point.mile), hos))
+            offset_s = elapsed_with_breaks(route.drive_seconds_at(point.mile), hos)
+            eta_offsets[route_id].append(offset_s)
+            eta = departure + timedelta(seconds=offset_s)
             weather = select_weather(forecasts[rounded_coord((point.lon, point.lat))], eta)
             assessment = (assess(weather.wind_mph, weather.rain_in_hr, weather.snow_in_hr, load)
                           if weather is not None else None)
@@ -96,5 +101,8 @@ def create_plan(data: dict) -> dict:
             ranked, {r["id"]: r["label"] for r in serialized})},
         "warnings": warnings, "routes": serialized,
     }
-    cache.set(f"plan:{result['plan_id']}", result, 6 * 3600)
+    # Keep full precision for rescoring; public timestamps intentionally use whole seconds.
+    cached_plan = result | {"_departure": departure, "_eta_offsets_s": eta_offsets,
+                            "_expires_at": timezone.now().timestamp() + PLAN_TTL_S}
+    cache.set(f"plan:{result['plan_id']}", cached_plan, PLAN_TTL_S)
     return result

@@ -41,6 +41,7 @@ uses pickle and must only be writable by the service account.
 - `GET /api/geocode?q=Dallas`: at most six US/Canada suggestions; query minimum three characters.
 - `POST /api/routes/plan`: exact SPEC §7 snake_case contract, UTC timestamps ending in `Z`.
 - `GET /api/heatmap?plan_id=...`: at most 300 corridor cells, each with 49 hourly values.
+- `GET /api/departure-options?plan_id=...`: 25 departures (0–24 h later), each route's risk/coverage/time/arrival, and a strictly safer suggestion or `null`; validated plan ID, same error envelope, 404 for unknown/expired plans, cached until the plan expires.
 
 DRF serializers validate coordinates, distinct endpoints, timezone-aware departure
 within −1 hour/+14 days, integer cargo weight 0–80,000 lb, interval 10/25/50 and HOS.
@@ -69,6 +70,7 @@ not erase successful batches or populate the cache with fabricated observations.
 
 ## Decisions and limitations
 
+- Departure options reuse checkpoint coordinates and exact drive/HOS ETA offsets with one deduplicated forecast fetch; the earliest minimum risk key (coverage, No Travel/Severe/High miles at 0.1 mi, average risk at 0.01, excluding time) wins only if strictly better than offset 0. Headlines name the highest-priority improvement; signed mileage differences use those rounded values. Traffic-dependent drive times are not queried again, and weather beyond the horizon stays unknown.
 - **Coverage correction from review:** routes with complete weather coverage rank
   before any route with unknown miles; within each group, the SPEC §6 lexicographic
   key applies (No Travel, Severe, High, average risk, total time, with specified rounding).
@@ -118,7 +120,7 @@ uv export --frozen --no-dev --no-emit-project --format requirements-txt --output
 See [docs/verification.md](docs/verification.md) for official API documentation checked,
 and actual check results.
 Tests mock HTTP with `responses`; no test calls real providers.
-`tests/test_frontend_contract.py` pins the real plan/heatmap payloads the frontend tests load
+`tests/test_frontend_contract.py` pins the real plan/heatmap/departure payloads the frontend tests load
 (`frontend/src/mocks/backend-*.sample.json`); after an API change run
 `WRITE_SAMPLES=1 uv run pytest -q tests/test_frontend_contract.py` and commit the samples. Tests under `tests/spec/` are a black-box suite written independently from SPEC.md.
 

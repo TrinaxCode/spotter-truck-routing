@@ -54,3 +54,29 @@ README records the gross-weight tare assumption, partial-coverage priority,
 precipitation-hour/nearest-wind mixing, gust display timing, simplified HOS, grid
 coarsening precedence and continental geometry limitations. No other intentional
 contract deviation was introduced. No commit, push or deployment was performed.
+
+## Departure options (§12.1) — 2026-11-15
+
+- `WRITE_SAMPLES=1 uv run pytest -q tests/test_frontend_contract.py`: **1 passed**;
+  wrote only the new `frontend/src/mocks/backend-departures.sample.json`. Existing
+  plan and heatmap samples remain byte-for-byte unchanged. The fixture includes a
+  non-null suggestion and unknown coverage beyond its shortened forecast horizon.
+- `uv run pytest -q`: **516 passed**; `uv run ruff check .`: **All checks passed**.
+  Departure tests pin exact offset-zero scores (including subsecond departure/HOS),
+  exact ETA shifts, risk-only strict comparisons/rounding, earliest/global optimum,
+  headline priority, outage/horizon nulls, query validation, 404, one deduplicated
+  forecast fetch, no rerouting and expiry shared with the original plan.
+- Synthetic service benchmark: **0.2697 s** for 25 offsets × 3 routes × 300 checkpoints
+  with 408-hour forecasts. Includes plan-cache read, scoring and result-cache write;
+  provider fetch mocked, all weather selection and risk/scoring functions real.
+- Live check: started a separate `uv run python manage.py runserver 8002 --noreload`
+  with local credentials. Dallas (32.7767, −96.797) → Denver (39.7392, −104.9903),
+  departure `2026-11-15T23:00:00Z`, 35,000 lb, 10 mi spacing, HOS on. Planning:
+  **200 in 15.6302 s**, 3 routes with **90/81/90 checkpoints**, no warnings.
+  Departure options: **200 in 0.1441 s**, 25 options, full base coverage, and all
+  offset-zero scores exactly equal to the plan. Suggestion: **null** (no strictly
+  better risk key than the base recommendation, Route B). Repeated cached request:
+  **0.0058 s**, identical payload.
+- Stopped only the newly started :8002 server; verified :8002 closed and the existing
+  :8000 server still listening. Django emitted the pre-existing relative cache-path
+  warning on startup; the API checks above succeeded.

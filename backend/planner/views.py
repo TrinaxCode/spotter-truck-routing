@@ -1,7 +1,13 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .serializers import GeocodeSerializer, HeatmapSerializer, PlanSerializer
+from .serializers import (
+    DepartureOptionsSerializer,
+    GeocodeSerializer,
+    HeatmapSerializer,
+    PlanSerializer,
+)
+from .services.departures import get_departure_options
 from .services.geocode import geocode
 from .services.heatmap import get_heatmap
 from .services.planner import create_plan
@@ -31,3 +37,10 @@ def heatmap_view(request):
     serializer = HeatmapSerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)
     return Response(get_heatmap(serializer.validated_data["plan_id"]))
+
+
+@api_view(["GET"])
+def departure_options_view(request):
+    serializer = DepartureOptionsSerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)
+    return Response(get_departure_options(serializer.validated_data["plan_id"]))

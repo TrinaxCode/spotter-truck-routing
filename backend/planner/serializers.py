@@ -71,3 +71,7 @@ class GeocodeSerializer(serializers.Serializer):
 
 class HeatmapSerializer(serializers.Serializer):
     plan_id = serializers.RegexField(r"^[a-zA-Z0-9_-]{1,64}$")
+
+
+class DepartureOptionsSerializer(HeatmapSerializer):
+    pass

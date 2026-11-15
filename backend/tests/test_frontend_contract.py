@@ -77,7 +77,7 @@ def weather_callback(request):
 
 
 @freeze_time("2026-11-15T14:00:00Z")
-def test_real_plan_and_heatmap_match_frontend_samples(settings, no_network, monkeypatch):
+def test_real_plan_heatmap_and_departures_match_frontend_samples(settings, no_network, monkeypatch):
     class FixedUuid:
         hex = "c0ffee1234567890"
 
@@ -91,6 +91,11 @@ def test_real_plan_and_heatmap_match_frontend_samples(settings, no_network, monk
     assert plan.status_code == 200, plan.content
     heat = client.get("/api/heatmap", {"plan_id": plan.json()["plan_id"]})
     assert heat.status_code == 200, heat.content
+    calls_before_departures = len(no_network.calls)
+    departures = client.get("/api/departure-options", {"plan_id": plan.json()["plan_id"]})
+    assert departures.status_code == 200, departures.content
+    # Plan checkpoints already warmed the real forecast cache; no new routing or HTTP.
+    assert len(no_network.calls) == calls_before_departures
     body = plan.json()
     stamp = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")  # whole seconds, UTC
     assert stamp.match(body["generated_at"]) and stamp.match(body["request"]["departure"])
@@ -98,9 +103,21 @@ def test_real_plan_and_heatmap_match_frontend_samples(settings, no_network, monk
         etas = [point["eta"] for point in route["checkpoints"]]
         assert all(stamp.match(value) for value in etas + [route["departure"], route["arrival"]])
         assert etas == sorted(etas) and etas[-1] == route["arrival"]
-    payloads = {"backend-plan.sample.json": plan.json(), "backend-heatmap.sample.json": heat.json()}
+    zero = departures.json()["options"][0]
+    assert zero["best_route_id"] == body["recommended_route_id"]
+    for route, rescored in zip(body["routes"], zero["routes"], strict=True):
+        assert rescored["route_id"] == route["id"]
+        for key in ("miles_by_level", "avg_risk", "max_level", "weather_coverage"):
+            assert rescored[key] == route["summary"][key]
+        assert rescored["total_time_s"] == route["total_time_s"]
+        assert rescored["arrival"] == route["arrival"]
+    payloads = {"backend-plan.sample.json": plan.json(), "backend-heatmap.sample.json": heat.json(),
+                "backend-departures.sample.json": departures.json()}
     for name, payload in payloads.items():
         text = json.dumps(payload, indent=1) + "\n"
-        if os.getenv("WRITE_SAMPLES"):
+        # Avoid rewriting unchanged files owned by the frontend engineer.
+        if os.getenv("WRITE_SAMPLES") and (
+            not (SAMPLES / name).exists() or (SAMPLES / name).read_text() != text
+        ):
             (SAMPLES / name).write_text(text)
         assert (SAMPLES / name).read_text() == text, f"{name} is stale; set WRITE_SAMPLES=1"

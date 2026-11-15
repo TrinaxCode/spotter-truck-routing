@@ -13,6 +13,7 @@ Plan a truck trip, get three route options, and see which one is safest given th
 4. Open-Meteo hourly forecasts (wind in mph, precipitation in inches) are read for each checkpoint's ETA hour and classified with the brief's risk and load rules.
 5. Routes are ranked by No Travel miles → Severe miles → High miles → average risk → total time. The recommendation explains which criterion decided it.
 6. The map shows every route, checkpoint, risk level and ETA, plus a corridor heatmap with a 0–48 h slider (Risk / Wind / Rain / Snow).
+7. Departure options compare the next 24 hours on the same routes and suggest the earliest strictly safer departure, when one exists.
 
 ## Architecture
 
@@ -47,6 +48,7 @@ API keys never reach the browser. Upstream calls have timeouts, a single retry a
 | Missing weather | Shown as `Unknown`, never treated as Low; routes with full coverage rank first | Missing data must never make a route look safer. |
 | HOS | 30 min after 8 h of driving, 10 h after 11 h; the 14 h window is not modelled | Without breaks, ETAs on long trips are off by a day, so the weather would be read for the wrong time. |
 | Heatmap | 49 frames fetched once; the slider only updates map paint properties | Sliding never refetches data or re-renders React. |
+| Departure options | Reuse drive times/HOS and cached forecasts; compare rounded risk without total time, earliest tie | Suggest only a strict risk improvement; later traffic is not re-queried. |
 
 ## Run locally
 

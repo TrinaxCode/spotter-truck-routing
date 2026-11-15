@@ -1,0 +1,1392 @@
+{
+ "plan_id": "c0ffee123456",
+ "base_departure": "2026-11-16T14:00:00Z",
+ "options": [
+  {
+   "offset_h": 0,
+   "departure": "2026-11-16T14:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 75.0,
+      "moderate": 150.0,
+      "high": 50.0,
+      "severe": 150.0,
+      "no_travel": 238.03537341923163,
+      "unknown": 0.0
+     },
+     "avg_risk": 2.4917848427255653,
+     "max_level": 4,
+     "weather_coverage": 1.0,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T01:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 75.0,
+      "moderate": 50.0,
+      "high": 50.0,
+      "severe": 300.0,
+      "no_travel": 193.3561749383599,
+      "unknown": 0.0
+     },
+     "avg_risk": 2.7282230165998054,
+     "max_level": 4,
+     "weather_coverage": 1.0,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T00:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 175.0,
+      "moderate": 150.0,
+      "high": 0.0,
+      "severe": 200.0,
+      "no_travel": 100.0,
+      "unknown": 39.08859759007396
+     },
+     "avg_risk": 1.84,
+     "max_level": 4,
+     "weather_coverage": 0.9411394839003057,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-17T11:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 1,
+   "departure": "2026-11-16T15:00:00Z",
+   "best_route_id": "r1",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 175.0,
+      "moderate": 100.0,
+      "high": 0.0,
+      "severe": 250.0,
+      "no_travel": 138.03537341923163,
+      "unknown": 0.0
+     },
+     "avg_risk": 2.1147310534069566,
+     "max_level": 4,
+     "weather_coverage": 1.0,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T02:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 75.0,
+      "moderate": 50.0,
+      "high": 50.0,
+      "severe": 350.0,
+      "no_travel": 143.3561749383599,
+      "unknown": 0.0
+     },
+     "avg_risk": 2.653412605811559,
+     "max_level": 4,
+     "weather_coverage": 1.0,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T01:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 175.0,
+      "moderate": 150.0,
+      "high": 0.0,
+      "severe": 150.0,
+      "no_travel": 150.0,
+      "unknown": 39.08859759007396
+     },
+     "avg_risk": 1.92,
+     "max_level": 4,
+     "weather_coverage": 0.9411394839003057,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-17T12:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 2,
+   "departure": "2026-11-16T16:00:00Z",
+   "best_route_id": "r1",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 225.0,
+      "moderate": 100.0,
+      "high": 0.0,
+      "severe": 200.0,
+      "no_travel": 138.03537341923163,
+      "unknown": 0.0
+     },
+     "avg_risk": 1.8884987798157913,
+     "max_level": 4,
+     "weather_coverage": 1.0,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T03:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 125.0,
+      "moderate": 100.0,
+      "high": 50.0,
+      "severe": 200.0,
+      "no_travel": 193.3561749383599,
+      "unknown": 0.0
+     },
+     "avg_risk": 2.354170962658572,
+     "max_level": 4,
+     "weather_coverage": 1.0,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T02:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 275.0,
+      "moderate": 50.0,
+      "high": 0.0,
+      "severe": 200.0,
+      "no_travel": 100.0,
+      "unknown": 39.08859759007396
+     },
+     "avg_risk": 1.68,
+     "max_level": 4,
+     "weather_coverage": 0.9411394839003057,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-17T13:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 3,
+   "departure": "2026-11-16T17:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 175.0,
+      "moderate": 150.0,
+      "high": 0.0,
+      "severe": 181.51768670961587,
+      "no_travel": 156.51768670961576,
+      "unknown": 0.0
+     },
+     "avg_risk": 1.991784842725565,
+     "max_level": 4,
+     "weather_coverage": 1.0,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T04:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 125.0,
+      "moderate": 100.0,
+      "high": 150.0,
+      "severe": 150.0,
+      "no_travel": 143.3561749383599,
+      "unknown": 0.0
+     },
+     "avg_risk": 2.129739730293832,
+     "max_level": 4,
+     "weather_coverage": 1.0,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T03:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 275.0,
+      "moderate": 0.0,
+      "high": 100.0,
+      "severe": 150.0,
+      "no_travel": 100.0,
+      "unknown": 39.08859759007396
+     },
+     "avg_risk": 1.68,
+     "max_level": 4,
+     "weather_coverage": 0.9411394839003057,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-17T14:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 4,
+   "departure": "2026-11-16T18:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 275.0,
+      "moderate": 50.0,
+      "high": 0.0,
+      "severe": 231.51768670961587,
+      "no_travel": 100.0,
+      "unknown": 6.517686709615759
+     },
+     "avg_risk": 1.7433697268160493,
+     "max_level": 4,
+     "weather_coverage": 0.9901699261141914,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T05:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 125.0,
+      "moderate": 150.0,
+      "high": 100.0,
+      "severe": 184.1780874691799,
+      "no_travel": 109.17808746918001,
+      "unknown": 0.0
+     },
+     "avg_risk": 2.0037917842350654,
+     "max_level": 4,
+     "weather_coverage": 1.0,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T04:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 125.0,
+      "moderate": 150.0,
+      "high": 50.0,
+      "severe": 150.0,
+      "no_travel": 150.0,
+      "unknown": 39.08859759007396
+     },
+     "avg_risk": 2.08,
+     "max_level": 4,
+     "weather_coverage": 0.9411394839003057,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-17T15:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 5,
+   "departure": "2026-11-16T19:00:00Z",
+   "best_route_id": "r1",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 175.0,
+      "moderate": 150.0,
+      "high": 0.0,
+      "severe": 150.0,
+      "no_travel": 100.0,
+      "unknown": 88.03537341923163
+     },
+     "avg_risk": 1.7391304347826086,
+     "max_level": 4,
+     "weather_coverage": 0.8672237154328,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T06:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 75.0,
+      "moderate": 250.0,
+      "high": 50.0,
+      "severe": 100.0,
+      "no_travel": 150.0,
+      "unknown": 43.35617493835991
+     },
+     "avg_risk": 2.0,
+     "max_level": 4,
+     "weather_coverage": 0.9351301348530842,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T05:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 125.0,
+      "moderate": 100.0,
+      "high": 50.0,
+      "severe": 200.0,
+      "no_travel": 100.0,
+      "unknown": 89.08859759007396
+     },
+     "avg_risk": 2.0869565217391304,
+     "max_level": 4,
+     "weather_coverage": 0.8658483251882813,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-17T16:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 6,
+   "departure": "2026-11-16T20:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 125.0,
+      "moderate": 50.0,
+      "high": 50.0,
+      "severe": 150.0,
+      "no_travel": 150.0,
+      "unknown": 138.03537341923163
+     },
+     "avg_risk": 2.2857142857142856,
+     "max_level": 4,
+     "weather_coverage": 0.7918129575690782,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T07:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 225.0,
+      "moderate": 100.0,
+      "high": 0.0,
+      "severe": 150.0,
+      "no_travel": 100.0,
+      "unknown": 93.35617493835991
+     },
+     "avg_risk": 1.6521739130434783,
+     "max_level": 4,
+     "weather_coverage": 0.8603197240648375,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T06:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 75.0,
+      "moderate": 50.0,
+      "high": 100.0,
+      "severe": 150.0,
+      "no_travel": 100.0,
+      "unknown": 189.08859759007396
+     },
+     "avg_risk": 2.3157894736842106,
+     "max_level": 4,
+     "weather_coverage": 0.7152660077642323,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-17T17:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 7,
+   "departure": "2026-11-16T21:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 50.0,
+      "moderate": 75.0,
+      "high": 50.0,
+      "severe": 200.0,
+      "no_travel": 100.0,
+      "unknown": 188.03537341923163
+     },
+     "avg_risk": 2.473684210526316,
+     "max_level": 4,
+     "weather_coverage": 0.7164021997053565,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T08:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 150.0,
+      "moderate": 75.0,
+      "high": 50.0,
+      "severe": 150.0,
+      "no_travel": 100.0,
+      "unknown": 143.3561749383599
+     },
+     "avg_risk": 1.9523809523809523,
+     "max_level": 4,
+     "weather_coverage": 0.7855093132765907,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T07:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 50.0,
+      "moderate": 25.0,
+      "high": 100.0,
+      "severe": 150.0,
+      "no_travel": 150.0,
+      "unknown": 189.08859759007396
+     },
+     "avg_risk": 2.6842105263157894,
+     "max_level": 4,
+     "weather_coverage": 0.7152660077642323,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-17T18:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 8,
+   "departure": "2026-11-16T22:00:00Z",
+   "best_route_id": "r1",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 75.0,
+      "high": 100.0,
+      "severe": 150.0,
+      "no_travel": 100.0,
+      "unknown": 238.03537341923163
+     },
+     "avg_risk": 2.6470588235294117,
+     "max_level": 4,
+     "weather_coverage": 0.6409914418416347,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T09:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 50.0,
+      "moderate": 75.0,
+      "high": 50.0,
+      "severe": 200.0,
+      "no_travel": 100.0,
+      "unknown": 193.3561749383599
+     },
+     "avg_risk": 2.473684210526316,
+     "max_level": 4,
+     "weather_coverage": 0.7106989024883439,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T08:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 75.0,
+      "high": 50.0,
+      "severe": 200.0,
+      "no_travel": 100.0,
+      "unknown": 239.08859759007396
+     },
+     "avg_risk": 2.764705882352941,
+     "max_level": 4,
+     "weather_coverage": 0.6399748490522079,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-17T19:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 9,
+   "departure": "2026-11-16T23:00:00Z",
+   "best_route_id": "r3",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 50.0,
+      "high": 50.0,
+      "severe": 175.0,
+      "no_travel": 100.0,
+      "unknown": 288.03537341923163
+     },
+     "avg_risk": 2.8666666666666667,
+     "max_level": 4,
+     "weather_coverage": 0.565580683977913,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T10:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 50.0,
+      "high": 0.0,
+      "severe": 225.0,
+      "no_travel": 100.0,
+      "unknown": 293.3561749383599
+     },
+     "avg_risk": 3.0,
+     "max_level": 4,
+     "weather_coverage": 0.5610780809118505,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T09:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 100.0,
+      "high": 50.0,
+      "severe": 175.0,
+      "no_travel": 0.0,
+      "unknown": 339.08859759007396
+     },
+     "avg_risk": 2.230769230769231,
+     "max_level": 3,
+     "weather_coverage": 0.489392531628159,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-17T20:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 10,
+   "departure": "2026-11-17T00:00:00Z",
+   "best_route_id": "r3",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 100.0,
+      "severe": 175.0,
+      "no_travel": 50.0,
+      "unknown": 338.03537341923163
+     },
+     "avg_risk": 2.8461538461538463,
+     "max_level": 4,
+     "weather_coverage": 0.4901699261141913,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T11:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 100.0,
+      "severe": 175.0,
+      "no_travel": 50.0,
+      "unknown": 343.3561749383599
+     },
+     "avg_risk": 2.8461538461538463,
+     "max_level": 4,
+     "weather_coverage": 0.4862676701236037,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T10:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 50.0,
+      "moderate": 50.0,
+      "high": 100.0,
+      "severe": 75.0,
+      "no_travel": 0.0,
+      "unknown": 389.08859759007396
+     },
+     "avg_risk": 1.7272727272727273,
+     "max_level": 3,
+     "weather_coverage": 0.41410137291613447,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-17T21:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 11,
+   "departure": "2026-11-17T01:00:00Z",
+   "best_route_id": "r1",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 50.0,
+      "high": 100.0,
+      "severe": 75.0,
+      "no_travel": 0.0,
+      "unknown": 438.03537341923163
+     },
+     "avg_risk": 2.111111111111111,
+     "max_level": 3,
+     "weather_coverage": 0.3393484103867478,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T12:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 50.0,
+      "high": 50.0,
+      "severe": 175.0,
+      "no_travel": 0.0,
+      "unknown": 393.3561749383599
+     },
+     "avg_risk": 2.4545454545454546,
+     "max_level": 3,
+     "weather_coverage": 0.41145725933535704,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T11:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 50.0,
+      "moderate": 0.0,
+      "high": 50.0,
+      "severe": 125.0,
+      "no_travel": 0.0,
+      "unknown": 439.08859759007396
+     },
+     "avg_risk": 2.111111111111111,
+     "max_level": 3,
+     "weather_coverage": 0.33881021420411006,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-17T22:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 12,
+   "departure": "2026-11-17T02:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 50.0,
+      "severe": 125.0,
+      "no_travel": 0.0,
+      "unknown": 488.03537341923163
+     },
+     "avg_risk": 2.7142857142857144,
+     "max_level": 3,
+     "weather_coverage": 0.26393765252302603,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T13:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 100.0,
+      "severe": 75.0,
+      "no_travel": 0.0,
+      "unknown": 493.3561749383599
+     },
+     "avg_risk": 2.4285714285714284,
+     "max_level": 3,
+     "weather_coverage": 0.26183643775886356,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T12:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 50.0,
+      "severe": 125.0,
+      "no_travel": 0.0,
+      "unknown": 489.08859759007396
+     },
+     "avg_risk": 2.7142857142857144,
+     "max_level": 3,
+     "weather_coverage": 0.26351905549208554,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-17T23:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 13,
+   "departure": "2026-11-17T03:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 100.0,
+      "no_travel": 25.0,
+      "unknown": 538.0353734192316
+     },
+     "avg_risk": 3.2,
+     "max_level": 4,
+     "weather_coverage": 0.1885268946593044,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T14:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 100.0,
+      "no_travel": 25.0,
+      "unknown": 543.3561749383599
+     },
+     "avg_risk": 3.2,
+     "max_level": 4,
+     "weather_coverage": 0.18702602697061688,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T13:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 100.0,
+      "no_travel": 25.0,
+      "unknown": 539.088597590074
+     },
+     "avg_risk": 3.2,
+     "max_level": 4,
+     "weather_coverage": 0.18822789678006113,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-18T00:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 14,
+   "departure": "2026-11-17T04:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 50.0,
+      "no_travel": 25.0,
+      "unknown": 588.0353734192316
+     },
+     "avg_risk": 3.3333333333333335,
+     "max_level": 4,
+     "weather_coverage": 0.11311613679558263,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T15:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 50.0,
+      "no_travel": 25.0,
+      "unknown": 593.3561749383599
+     },
+     "avg_risk": 3.3333333333333335,
+     "max_level": 4,
+     "weather_coverage": 0.11221561618237008,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T14:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 50.0,
+      "no_travel": 25.0,
+      "unknown": 589.088597590074
+     },
+     "avg_risk": 3.3333333333333335,
+     "max_level": 4,
+     "weather_coverage": 0.11293673806803672,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-18T01:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 15,
+   "departure": "2026-11-17T05:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 25.0,
+      "unknown": 638.0353734192316
+     },
+     "avg_risk": 4.0,
+     "max_level": 4,
+     "weather_coverage": 0.03770537893186088,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T16:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 25.0,
+      "unknown": 643.3561749383599
+     },
+     "avg_risk": 4.0,
+     "max_level": 4,
+     "weather_coverage": 0.0374052053941234,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T15:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 25.0,
+      "unknown": 639.088597590074
+     },
+     "avg_risk": 4.0,
+     "max_level": 4,
+     "weather_coverage": 0.037645579356012204,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-18T02:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 16,
+   "departure": "2026-11-17T06:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 663.0353734192316
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T17:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 668.3561749383599
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T16:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 664.088597590074
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-18T03:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 17,
+   "departure": "2026-11-17T07:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 663.0353734192316
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T18:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 668.3561749383599
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T17:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 664.088597590074
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-18T04:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 18,
+   "departure": "2026-11-17T08:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 663.0353734192316
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T19:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 668.3561749383599
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T18:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 664.088597590074
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-18T05:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 19,
+   "departure": "2026-11-17T09:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 663.0353734192316
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T20:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 668.3561749383599
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T19:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 664.088597590074
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-18T06:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 20,
+   "departure": "2026-11-17T10:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 663.0353734192316
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T21:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 668.3561749383599
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T20:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 664.088597590074
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-18T07:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 21,
+   "departure": "2026-11-17T11:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 663.0353734192316
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T22:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 668.3561749383599
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T21:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 664.088597590074
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-18T08:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 22,
+   "departure": "2026-11-17T12:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 663.0353734192316
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-17T23:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 668.3561749383599
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T22:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 664.088597590074
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-18T09:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 23,
+   "departure": "2026-11-17T13:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 663.0353734192316
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-18T00:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 668.3561749383599
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-17T23:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 664.088597590074
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-18T10:56:59Z"
+    }
+   ]
+  },
+  {
+   "offset_h": 24,
+   "departure": "2026-11-17T14:00:00Z",
+   "best_route_id": "r2",
+   "routes": [
+    {
+     "route_id": "r1",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 663.0353734192316
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 40299.0,
+     "arrival": "2026-11-18T01:11:39Z"
+    },
+    {
+     "route_id": "r2",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 668.3561749383599
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 38256.0,
+     "arrival": "2026-11-18T00:37:36Z"
+    },
+    {
+     "route_id": "r3",
+     "miles_by_level": {
+      "low": 0.0,
+      "moderate": 0.0,
+      "high": 0.0,
+      "severe": 0.0,
+      "no_travel": 0.0,
+      "unknown": 664.088597590074
+     },
+     "avg_risk": 0.0,
+     "max_level": null,
+     "weather_coverage": 0.0,
+     "total_time_s": 79019.0,
+     "arrival": "2026-11-18T11:56:59Z"
+    }
+   ]
+  }
+ ],
+ "suggestion": {
+  "offset_h": 4,
+  "departure": "2026-11-16T18:00:00Z",
+  "route_id": "r2",
+  "headline": "Leave 4 h later on Route B to avoid 84.2 mi of No Travel weather.",
+  "improvement": {
+   "no_travel_mi": 84.2,
+   "severe_mi": 115.8,
+   "high_mi": -50.0
+  }
+ }
+}
