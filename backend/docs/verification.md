@@ -31,8 +31,7 @@ provider calls. No live API credentials were used for these verifications.
 
 - Initial domain/spec baseline: **432 passed** (381 independent spec + 51 domain).
 - Backend domain/provider/API tests after implementation: **107 passed**.
-- Full `uv run pytest -q`: **487 passed, 1 failed**. The only failure is the independent
-  `test_unknown_miles_do_not_enter_the_ranking_key` (see conflict below).
+- Full `uv run pytest -q`: **487 passed, 1 failed** at that point (resolved below).
 - `uv run ruff check .`: **All checks passed**.
 - `uv run python manage.py check --deploy` with DEBUG=false, a temporary strong secret
   and production HTTPS settings: **no issues, 0 silenced**.
@@ -44,16 +43,11 @@ provider calls. No live API credentials were used for these verifications.
 - Shared file cache: one Django process wrote an object; a separate process read it.
   Temporary smoke cache directories and server processes were cleaned up.
 
-## Independent test conflict
+## Independent test conflict (resolved)
 
-The orchestrator's correction requires full weather coverage to outrank partial
-coverage before applying the SPEC §6 risk key. Existing independent test
-`tests/spec/test_spec_recommend.py::test_unknown_miles_do_not_enter_the_ranking_key`
-requires a route with 300 unknown miles to beat a fully covered route by time alone.
-These requirements contradict each other. The backend follows the explicit review
-correction, adds two regression cases (all unknown and partial), and leaves the
-independently owned suite unchanged. Its owner must update that obsolete assertion
-before the entire suite can be green. No test was skipped, xfailed or excluded.
+The spec suite's old unknown-miles assertion predated the coverage rule. The orchestrator
+amended SPEC §6 and the test (`test_full_weather_coverage_outranks_partial_coverage`); the full
+suite is green.
 
 ## Ambiguities resolved explicitly
 

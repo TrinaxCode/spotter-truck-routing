@@ -116,12 +116,11 @@ uv export --frozen --no-dev --no-emit-project --format requirements-txt --output
 ```
 
 See [docs/verification.md](docs/verification.md) for official API documentation checked,
-actual check results and the outstanding conflict in the independently owned spec suite.
+and actual check results.
 Tests mock HTTP with `responses`; no test calls real providers.
 `tests/test_frontend_contract.py` pins the real plan/heatmap payloads the frontend tests load
 (`frontend/src/mocks/backend-*.sample.json`); after an API change run
-`WRITE_SAMPLES=1 uv run pytest -q tests/test_frontend_contract.py` and commit the samples. Tests under `tests/spec/`
-are independently maintained and have not been edited by this backend implementation.
+`WRITE_SAMPLES=1 uv run pytest -q tests/test_frontend_contract.py` and commit the samples. Tests under `tests/spec/` are a black-box suite written independently from SPEC.md.
 
 ## Render
 
