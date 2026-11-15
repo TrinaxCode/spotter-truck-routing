@@ -231,3 +231,10 @@ def test_past_departure_is_sent_to_tomtom_as_now():
     now = timezone.now()
     assert depart_at(now - timedelta(minutes=30)) == "now"
     assert depart_at(now + timedelta(hours=2)).endswith("Z")
+
+
+def test_routing_uses_a_timeout_long_enough_for_coast_to_coast_routes():
+    from planner.services.routing import ROUTING_TIMEOUT_S
+
+    # TomTom takes ~16 s for Los Angeles -> New York truck routes with alternatives.
+    assert ROUTING_TIMEOUT_S >= 30

@@ -18,11 +18,11 @@ def cache_key(namespace: str, *values) -> str:
     return f"{namespace}:v1:{digest}"
 
 
-def get_json(url: str, params: dict):
+def get_json(url: str, params: dict, timeout: float = 10):
     """Never expose a requests exception: its URL may contain provider credentials."""
     for attempt in range(2):
         try:
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.get(url, params=params, timeout=timeout)
             if attempt == 0 and (response.status_code == 429 or response.status_code >= 500):
                 time.sleep(.25)
                 continue

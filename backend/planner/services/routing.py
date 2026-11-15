@@ -1,5 +1,6 @@
 from bisect import bisect_right
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
 from math import cos, isfinite, radians
@@ -45,6 +46,10 @@ class Route:
         if len(inverse) < 2:
             return 0
         return interpolate(seconds, sorted(inverse.items()))
+
+
+# Coast-to-coast truck routes with alternatives take ~16 s at TomTom.
+ROUTING_TIMEOUT_S = 45
 
 
 class RoutingProvider(Protocol):
@@ -101,7 +106,7 @@ class TomTomProvider:
             "vehicleWeight": round((load_lbs + settings.TRUCK_TARE_LBS) * .45359237),
             "maxAlternatives": max_alternatives, "departAt": depart_at(departure),
             "routeRepresentation": "polyline", "instructionsType": "coded",
-        })
+        }, timeout=ROUTING_TIMEOUT_S)
         try:
             routes = [parse_route(raw) for raw in payload["routes"]]
             if not routes:
@@ -151,15 +156,21 @@ def get_routes(
                 result.append(route)
 
     add(provider.calculate_routes(origin, destination, departure, load_lbs))
-    for via in via_points(origin, destination):
-        if len(result) == 3:
-            break
-        try:
-            add(provider.calculate_routes(origin, destination, departure, load_lbs,
-                                          via=via, max_alternatives=0))
-        except UpstreamError:
-            # A via point can be inaccessible; keep real successful routes.
-            continue
+    if len(result) < 3:
+        # Long truck routes take seconds each, so request every via-point route at once and
+        # still consider them in via_points() order (±15% before ±30%).
+        def via_route(via: Coord) -> list[Route]:
+            try:
+                return provider.calculate_routes(origin, destination, departure, load_lbs,
+                                                 via=via, max_alternatives=0)
+            except UpstreamError:
+                # A via point can be inaccessible; keep real successful routes.
+                return []
+
+        vias = via_points(origin, destination)
+        with ThreadPoolExecutor(max_workers=len(vias)) as pool:
+            for candidates in pool.map(via_route, vias):
+                add(candidates)
     if not result:
         raise UpstreamError()
     warnings = ([f"Only {len(result)} distinct route(s) found; fewer than 3 are available."]
