@@ -72,7 +72,7 @@ Missing weather (ETA beyond forecast horizon or provider failure) → level `nul
 - Each checkpoint **owns** the miles closer to it than to its neighbours (half of each adjacent gap). Owned miles sum to the route distance.
 - `miles_by_level` = owned miles summed per level (+ `unknown` for null levels).
 - `avg_risk` = owned-miles-weighted mean of level ints over known miles (0–4).
-- Ranking key, ascending, lexicographic (brief order, with No Travel ranked worse than Severe):
+- Ranking key, ascending, lexicographic (brief order, with No Travel ranked worse than Severe). Routes with full weather coverage always rank ahead of routes with unknown miles (missing data must never look safe); then:
   1. `no_travel_mi` (rounded to 0.1)
   2. `severe_mi` (0.1)
   3. `high_mi` (0.1)

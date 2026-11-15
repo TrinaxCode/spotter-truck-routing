@@ -15,3 +15,5 @@ staticfiles/
 *.sqlite3
 .DS_Store
 .vercel
+.orchestrator/
+AGENT_PROMPT.md
