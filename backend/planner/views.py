@@ -20,7 +20,8 @@ def scoped(scope: str):
     @api_view does not carry a `throttle_scope` attribute over to its view class, so each scope
     gets its own throttle class instead of ScopedRateThrottle.
     """
-    throttle = type(f"{scope.title().replace('_', '')}Throttle", (AnonRateThrottle,), {"scope": scope})
+    name = f"{scope.title().replace('_', '')}Throttle"
+    throttle = type(name, (AnonRateThrottle,), {"scope": scope})
     return throttle_classes([throttle])
 
 
