@@ -5,6 +5,7 @@ import { useReducedMotion } from "../hooks/useReducedMotion";
 import { formatReadout, readoutAtMile } from "../lib/profile";
 import { buildTimeline, nearestCheckpoint, type TripSample } from "../lib/tripTimeline";
 import { onRadioKeyDown } from "../lib/radio";
+import { DriveHud } from "./DriveHud";
 import { WeatherProfile } from "./WeatherProfile";
 
 interface TripProfileProps {
@@ -16,6 +17,9 @@ interface TripProfileProps {
   onPlaying: (playing: boolean) => void;
   /** Checkpoint under the profile cursor, for the ring on the map; null clears it. */
   onFocusCheckpoint: (routeId: string, index: number | null) => void;
+  /** Chase camera state, reported by the map. */
+  following: boolean;
+  onFollow: (on: boolean) => void;
 }
 
 /**
@@ -23,7 +27,16 @@ interface TripProfileProps {
  * playback (SPEC §12.3). Keyed by route in the parent, so a route change unmounts it, which stops
  * the animation loop and removes the truck.
  */
-export function TripProfile({ route, heatStartIso, onTruck, onHour, onPlaying, onFocusCheckpoint }: TripProfileProps) {
+export function TripProfile({
+  route,
+  heatStartIso,
+  onTruck,
+  onHour,
+  onPlaying,
+  onFocusCheckpoint,
+  following,
+  onFollow,
+}: TripProfileProps) {
   const timeline = useMemo(() => buildTimeline(route), [route]);
   const reduceMotion = useReducedMotion();
   const playback = useTripPlayback({ timeline, heatStartIso, reduceMotion, onTruck, onHour, onPlaying });
@@ -70,6 +83,20 @@ export function TripProfile({ route, heatStartIso, onTruck, onHour, onPlaying, o
 
   return (
     <section className="trip" aria-label={`Weather and trip along ${route.label}`} data-testid="trip-profile">
+      <DriveHud
+        route={route}
+        timeline={timeline}
+        status={status}
+        sample={sample}
+        speed={playback.speed}
+        following={following}
+        reduceMotion={reduceMotion}
+        onStart={() => (reduceMotion ? playback.step(1) : playback.play())}
+        onToggle={() => (playing ? playback.pause() : playback.play())}
+        onStop={playback.stop}
+        onSpeed={playback.setSpeed}
+        onFollow={onFollow}
+      />
       <h2 className="section-title">Along {route.label}</h2>
       <div className="trip-card">
         <div className="trip-controls">

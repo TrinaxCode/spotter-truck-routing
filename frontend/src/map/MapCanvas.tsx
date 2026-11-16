@@ -7,13 +7,15 @@ interface MapCanvasProps {
   onReady: (handle: MapHandle) => void;
   onInspect: (routeId: string, index: number) => void;
   onSelect: (routeId: string) => void;
+  onChaseChange: (following: boolean) => void;
 }
 
-export const MapCanvas = memo(function MapCanvas({ onReady, onInspect, onSelect }: MapCanvasProps) {
+export const MapCanvas = memo(function MapCanvas({ onReady, onInspect, onSelect, onChaseChange }: MapCanvasProps) {
   const nodeRef = useRef<HTMLDivElement>(null);
   const readyRef = useRef(onReady);
   const inspectRef = useRef(onInspect);
   const selectRef = useRef(onSelect);
+  const chaseRef = useRef(onChaseChange);
   /** Bumped by Retry; each value builds a fresh map and App replays the plan onto it via onReady. */
   const [attempt, setAttempt] = useState(0);
   const [failure, setFailure] = useState<string | null>(null);
@@ -21,7 +23,8 @@ export const MapCanvas = memo(function MapCanvas({ onReady, onInspect, onSelect 
     readyRef.current = onReady;
     inspectRef.current = onInspect;
     selectRef.current = onSelect;
-  }, [onReady, onInspect, onSelect]);
+    chaseRef.current = onChaseChange;
+  }, [onReady, onInspect, onSelect, onChaseChange]);
   noteMapRender();
 
   useEffect(() => {
@@ -40,6 +43,7 @@ export const MapCanvas = memo(function MapCanvas({ onReady, onInspect, onSelect 
         onInspect: (routeId, index) => inspectRef.current(routeId, index),
         onSelect: (routeId) => selectRef.current(routeId),
         onStyleError: fail,
+        onChaseChange: (following) => chaseRef.current(following),
       });
     } catch (error) {
       console.error(error);

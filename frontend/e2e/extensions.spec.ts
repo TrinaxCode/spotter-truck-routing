@@ -1,6 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 
-type Probe = { sourceUpdates: number; paintUpdates: number; truckUpdates: number; featureStateUpdates: number; mapRenders: number; frame: number };
+type Probe = {
+  sourceUpdates: number;
+  paintUpdates: number;
+  truckUpdates: number;
+  featureStateUpdates: number;
+  mapRenders: number;
+  frame: number;
+  truck3d?: boolean;
+  chase?: boolean;
+};
 
 const probe = (page: Page) => page.evaluate(() => ({ ...window.__spotter }) as Probe);
 
@@ -120,8 +129,8 @@ test.describe("trip playback", () => {
     await page.waitForTimeout(400);
     expect((await probe(page)).truckUpdates).toBe(paused.truckUpdates);
 
-    await page.getByRole("button", { name: "Stop" }).click();
-    await expect(page.getByRole("button", { name: "Stop" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Stop", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Stop", exact: true })).toHaveCount(0);
     expect((await probe(page)).sourceUpdates).toBe(before.sourceUpdates);
   });
 
@@ -134,9 +143,9 @@ test.describe("trip playback", () => {
     await expect(page.getByTestId("stop-badge")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("stop-badge")).toHaveText(/30-min break|10-h rest/);
 
-    await page.getByRole("button", { name: /Route B/ }).click();
+    await page.locator("button.route-main", { hasText: "Route B" }).click();
     await expect(page.getByTestId("trip-profile")).toContainText("Along Route B");
-    await expect(page.getByRole("button", { name: "Stop" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Stop", exact: true })).toHaveCount(0);
     await expect(page.getByTestId("heatmap-slider")).toBeEnabled();
     const settled = await probe(page);
     await page.waitForTimeout(300);
@@ -178,16 +187,6 @@ test.describe("phone layout", () => {
     for (const selector of [".strip-wrap", ".depart-callout", ".trip-card", ".profile-chart svg", ".trip-controls", ".trip-readout"]) {
       await inside(selector);
     }
-    await page.getByTestId("trip-play").click();
-    await page.waitForTimeout(600);
-    await inside(".trip-readout .trip-stop");
-    const widths = await page.evaluate(() => {
-      const scroller = document.getElementById("trip-panel-body")!;
-      return { page: document.documentElement.scrollWidth, scroller: scroller.scrollWidth - scroller.clientWidth };
-    });
-    expect(widths.page).toBeLessThanOrEqual(375);
-    expect(widths.scroller).toBeLessThanOrEqual(0);
-
     // Every strip bar is a real, separate target at this width.
     const bars = await page.getByTestId("departure-bar").evaluateAll((nodes) =>
       nodes.map((node) => {
@@ -200,5 +199,48 @@ test.describe("phone layout", () => {
       expect(bar.height).toBeGreaterThanOrEqual(44);
       if (index > 0) expect(bar.x).toBeGreaterThanOrEqual(bars[index - 1].x + bars[index - 1].width - 0.5);
     }
+
+    await page.getByTestId("trip-play").click();
+    await page.waitForTimeout(600);
+    // Driving folds the sheet away and floats the HUD over the map; it must fit the phone too.
+    await inside('[data-testid="drive-hud"]');
+    const widths = await page.evaluate(() => {
+      const scroller = document.getElementById("trip-panel-body")!;
+      return { page: document.documentElement.scrollWidth, scroller: scroller.scrollWidth - scroller.clientWidth };
+    });
+    expect(widths.page).toBeLessThanOrEqual(375);
+    expect(widths.scroller).toBeLessThanOrEqual(0);
+
+  });
+});
+
+test.describe("drive mode", () => {
+  test("Drive starts a 3D truck with a chase camera and a HUD; dragging the map hands the camera back", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await planTrip(page);
+    const before = await probe(page);
+    await page.getByTestId("drive-start").click();
+
+    const hud = page.getByTestId("drive-hud");
+    await expect(hud).toBeVisible();
+    await expect(hud).toContainText(/Mile \d+ · .* to go/);
+    await expect.poll(async () => (await probe(page)).truck3d, { timeout: 15_000 }).toBe(true);
+    await expect.poll(async () => (await probe(page)).chase).toBe(true);
+    await expect(hud.getByRole("button", { name: "Overview" })).toHaveAttribute("aria-pressed", "true");
+    // Following the truck moves the camera, never the data sources.
+    expect((await probe(page)).sourceUpdates).toBe(before.sourceUpdates);
+
+    const canvas = page.locator(".map-canvas canvas").first();
+    const box = (await canvas.boundingBox())!;
+    await page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.6);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5, { steps: 6 });
+    await page.mouse.up();
+    await expect.poll(async () => (await probe(page)).chase).toBe(false);
+    await expect(hud.getByRole("button", { name: "Follow" })).toHaveAttribute("aria-pressed", "false");
+
+    await hud.getByRole("button", { name: "Stop trip" }).click();
+    await expect(hud).toHaveCount(0);
+    await expect(page.getByTestId("drive-start")).toBeVisible();
   });
 });

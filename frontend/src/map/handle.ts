@@ -24,5 +24,7 @@ export interface MapHandle {
   setFocus: (routeId: string | null, index?: number) => void;
   /** Moves the truck. Writes only the one-feature truck source; null removes the truck. */
   setTruck: (truck: TruckPosition | null) => void;
+  /** Chase camera on/off while a truck is on the map (tilted follow view vs. free map). */
+  setChase: (on: boolean) => void;
   destroy: () => void;
 }

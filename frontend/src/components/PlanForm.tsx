@@ -20,6 +20,8 @@ interface PlanFormProps {
    * so Edit shows the time that was actually planned.
    */
   departureSync?: { local: string; token: number } | null;
+  /** Replaces the whole form when `token` changes (an example, recent trip or shared link was opened). */
+  draftSync?: { draft: TripDraft; token: number } | null;
 }
 
 function initialDraft(): TripDraft {
@@ -33,12 +35,17 @@ function initialDraft(): TripDraft {
   };
 }
 
-export function PlanForm({ busy, serverErrors, onPlan, search, departureSync }: PlanFormProps) {
+export function PlanForm({ busy, serverErrors, onPlan, search, departureSync, draftSync }: PlanFormProps) {
   const [draft, setDraft] = useState<TripDraft>(initialDraft);
   const [seenSync, setSeenSync] = useState(0);
   if (departureSync && departureSync.token !== seenSync) {
     setSeenSync(departureSync.token);
     setDraft((current) => ({ ...current, departureLocal: departureSync.local }));
+  }
+  const [seenDraft, setSeenDraft] = useState(0);
+  if (draftSync && draftSync.token !== seenDraft) {
+    setSeenDraft(draftSync.token);
+    setDraft(draftSync.draft);
   }
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [attempted, setAttempted] = useState(false);

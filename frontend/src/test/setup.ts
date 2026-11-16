@@ -4,6 +4,16 @@ import { afterEach } from "vitest";
 
 afterEach(() => {
   cleanup();
+  // A planned trip writes its share link into the URL and its template into recent trips;
+  // the next test must start from a fresh page.
+  if (typeof window !== "undefined") {
+    window.history.replaceState(null, "", "/");
+    try {
+      window.localStorage.clear();
+    } catch {
+      // jsdom without storage: nothing to reset.
+    }
+  }
 });
 
 if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {

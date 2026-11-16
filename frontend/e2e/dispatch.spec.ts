@@ -9,7 +9,7 @@ async function planTrip(page: Page) {
   await expect(page.getByTestId("route-card")).toHaveCount(3);
   await expect(page.getByTestId("trip-summary")).toContainText(/Dallas → Denver/);
   await expect(page.getByRole("combobox", { name: "Origin" })).toBeHidden();
-  await expect(page.getByRole("button", { name: /Route A/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("button.route-main", { hasText: "Route A" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("heatmap-slider")).toBeEnabled();
 }
 
@@ -34,8 +34,8 @@ test("plan, select a route, slide the forecast, and open a checkpoint", async ({
     .poll(async () => page.evaluate(() => window.__spotter?.sourceUpdates ?? 0), { timeout: 20_000 })
     .toBeGreaterThan(0);
 
-  await page.getByRole("button", { name: /Route B/ }).click();
-  await expect(page.getByRole("button", { name: /Route B/ })).toHaveAttribute("aria-pressed", "true");
+  await page.locator("button.route-main", { hasText: "Route B" }).click();
+  await expect(page.locator("button.route-main", { hasText: "Route B" })).toHaveAttribute("aria-pressed", "true");
 
   const before = await page.evaluate(() => ({ ...(window.__spotter ?? {}) }));
   await slider.focus();

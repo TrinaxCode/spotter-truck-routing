@@ -10,6 +10,7 @@ import { NEUTRAL_ROUTE_COLOR, riskColor } from "../lib/riskColor";
 import { segmentRoute } from "../lib/routeSegments";
 import { etaHourIndex, floorHourIso } from "../lib/time";
 import type { MapHandle, TruckPosition } from "./handle";
+import type { Truck3D } from "./truck3d";
 
 export type { MapHandle } from "./handle";
 
@@ -61,6 +62,8 @@ export interface MapControllerOptions {
   onSelect: (routeId: string) => void;
   /** The basemap style could not be loaded (network, blocked host). The map surface is unusable. */
   onStyleError: (message: string) => void;
+  /** The chase camera started or stopped (also when the user drags the map away). */
+  onChaseChange?: (following: boolean) => void;
 }
 
 interface CheckpointHit {
@@ -160,6 +163,13 @@ export function createMapController(container: HTMLElement, options: MapControll
   let focusedId: number | null = null;
   let focusKey = "";
   let truck: TruckPosition | null = null;
+  /** three.js truck, loaded on the first playback frame (its chunk stays out of the shell). */
+  let truck3d: Truck3D | null = null;
+  let truck3dLoading = false;
+  /** Chase camera: tilted, centred on the truck and turned with its heading while it drives. */
+  let chase = false;
+  let chaseEntering = false;
+  let chaseBearing = 0;
   let followPadding: maplibregl.PaddingOptions | null = null;
   let followPaddingAt = 0;
   let lastFollowAt = 0;
@@ -180,10 +190,27 @@ export function createMapController(container: HTMLElement, options: MapControll
   };
   const resize = new ResizeObserver(onLayout);
   resize.observe(container);
-  for (const node of overlayNodes()) resize.observe(node);
+  const watched = new WeakSet<Element>();
+  const watchOverlays = () => {
+    for (const node of overlayNodes()) {
+      if (watched.has(node)) continue;
+      watched.add(node);
+      resize.observe(node);
+    }
+  };
+  watchOverlays();
+  // Floating cards mount later (the drive call to action, the trip HUD); frame around them too.
+  const overlayMounts = new MutationObserver(() => {
+    watchOverlays();
+    onLayout();
+  });
+  overlayMounts.observe(document.body, { childList: true, subtree: true });
   // A gesture hands the camera to the user; programmatic moves carry no originalEvent.
   map.on("movestart", (event) => {
-    if (event.originalEvent) autoFramed = null;
+    if (!event.originalEvent) return;
+    autoFramed = null;
+    // Dragging the map during playback hands the camera back to the user.
+    if (chase) setChaseState(false);
   });
 
   // The OpenFreeMap dark style references a POI sprite it does not ship; a blank pixel keeps the console clean.
@@ -487,6 +514,92 @@ export function createMapController(container: HTMLElement, options: MapControll
         "icon-ignore-placement": true,
       },
       paint: { "icon-opacity": ["case", ["==", ["get", "stopped"], true], 0, 1] as unknown as AllPaintProperties["icon-opacity"] },
+    });
+    if (truck3d) mountTruck3D();
+  }
+
+  const TRUCK_2D_LAYERS = ["truck-halo", "truck-body", "truck-arrow"];
+
+  /** Adds the three.js truck above everything and retires the flat chevron. */
+  function mountTruck3D(): void {
+    if (!truck3d || !styled) return;
+    truck3d.setAccent(ACCENT[theme]);
+    if (!map.getLayer(truck3d.layer.id)) map.addLayer(truck3d.layer);
+    if (import.meta.env.DEV) ensureProbe().truck3d = true;
+    for (const id of TRUCK_2D_LAYERS) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", "none");
+    }
+    truck3d.update(truck);
+  }
+
+  function loadTruck3D(): void {
+    if (truck3d || truck3dLoading) return;
+    truck3dLoading = true;
+    import("./truck3d")
+      .then(({ createTruck3D }) => {
+        if (!alive) return;
+        truck3d = createTruck3D(map, ACCENT[theme]);
+        mountTruck3D();
+      })
+      .catch((error: unknown) => {
+        // The flat chevron keeps working; a failed chunk only costs the 3D look.
+        console.warn("3D truck unavailable", error);
+      })
+      .finally(() => {
+        truck3dLoading = false;
+      });
+  }
+
+  /** Shortest-path easing between two compass bearings. */
+  function easeBearing(from: number, to: number, k: number): number {
+    const delta = ((((to - from) % 360) + 540) % 360) - 180;
+    return from + delta * k;
+  }
+
+  /** Tilts in behind the truck once, then tracks it every frame with a damped heading. */
+  function followTruck(): void {
+    if (!truck || !chase || chaseEntering) return;
+    chaseBearing = easeBearing(chaseBearing, truck.bearing, truck.stopped ? 0 : 0.06);
+    map.jumpTo({ center: [truck.lon, truck.lat], bearing: chaseBearing, padding: followPadding ?? overlayPadding() });
+  }
+
+  function setChaseState(on: boolean): void {
+    chase = on;
+    if (import.meta.env.DEV) ensureProbe().chase = on;
+    options.onChaseChange?.(on);
+  }
+
+  function enterChase(): void {
+    if (!truck || !styled) return;
+    setChaseState(true);
+    chaseEntering = true;
+    autoFramed = null;
+    followPadding = overlayPadding();
+    followPaddingAt = performance.now();
+    chaseBearing = truck.bearing;
+    map.easeTo({
+      center: [truck.lon, truck.lat],
+      zoom: Math.max(map.getZoom(), 10.2),
+      pitch: 60,
+      bearing: chaseBearing,
+      padding: followPadding,
+      duration: 1400,
+      essential: true,
+    });
+    map.once("moveend", () => {
+      chaseEntering = false;
+    });
+  }
+
+  /** Back to the flat overview of the whole trip. */
+  function leaveChase(): void {
+    const was = chase || map.getPitch() > 0 || map.getBearing() !== 0;
+    chaseEntering = false;
+    setChaseState(false);
+    if (!was || !plan || !styled) return;
+    map.easeTo({ pitch: 0, bearing: 0, duration: 700 });
+    map.once("moveend", () => {
+      if (alive && plan && !chase) fit(plan);
     });
   }
 
@@ -1079,17 +1192,33 @@ export function createMapController(container: HTMLElement, options: MapControll
     },
     setTruck(next) {
       if (!alive) return;
+      const starting = !truck && next;
       truck = next;
       if (!styled) return;
       geoSource(TRUCK_SOURCE)?.setData(truckCollection());
+      truck3d?.update(next);
       bumpTruck();
-      keepTruckInView();
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!next) {
+        leaveChase();
+        return;
+      }
+      if (!reduce) loadTruck3D();
+      if (starting && !reduce) enterChase();
+      if (chase) followTruck();
+      else keepTruckInView();
+    },
+    setChase(on) {
+      if (!alive || !truck) return;
+      if (on && !chase) enterChase();
+      else if (!on && chase) leaveChase();
     },
     destroy() {
       alive = false;
       cancelAnimationFrame(fadeFrame);
       cancelAnimationFrame(layoutFrame);
       resize.disconnect();
+      overlayMounts.disconnect();
       tip.remove();
       for (const marker of markers) marker.remove();
       map.remove();

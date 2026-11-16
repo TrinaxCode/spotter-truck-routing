@@ -16,6 +16,8 @@ export default defineConfig({
         codeSplitting: {
           groups: [
             { name: "maplibre", test: /maplibre-gl/, priority: 30 },
+            // three.js only serves the playback truck; it stays in a lazy chunk of its own.
+            { name: "three", test: /node_modules[\\/]three[\\/]/, priority: 20 },
             { name: "vendor", test: /node_modules/, priority: 10 },
           ],
         },

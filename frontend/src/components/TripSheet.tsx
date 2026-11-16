@@ -54,7 +54,9 @@ export function TripSheet({ title, settleKey, lowerKey, children }: TripSheetPro
 
   if ((lowerKey ?? null) !== seenLower) {
     setSeenLower(lowerKey ?? null);
-    if (lowerKey && isPhone() && snap === "expanded") setSnap("half");
+    // Driving needs the map: the sheet folds away entirely; a checkpoint card only needs room.
+    if (lowerKey === "drive" && isPhone()) setSnap(ORDER[0]);
+    else if (lowerKey && isPhone() && snap === "expanded") setSnap("half");
   }
 
   function shift(direction: 1 | -1) {

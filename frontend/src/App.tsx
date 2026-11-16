@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiError, describeApiError, flattenFieldErrors, isRetryable, type FieldIssues } from "./api/errors";
 import { api } from "./api/client";
 import type {
@@ -18,6 +18,9 @@ import { EmptyState, ErrorNote, MapSkeleton, RouteSkeleton } from "./components/
 import { TripProfile } from "./components/TripProfile";
 import { TripSheet } from "./components/TripSheet";
 import { TripSummary } from "./components/TripSummary";
+import { QuickStart } from "./components/QuickStart";
+import { ToastMessage, ToastRegion } from "./components/Toast";
+import { draftToSearch, draftToTemplate, loadRecentTrips, rememberTrip, searchToDraft, templateToDraft, type TripTemplate } from "./lib/trips";
 import { heatmapCoverage, type HeatCoverage } from "./lib/heatmap";
 import { draftToRequest, type FieldErrors, type TripDraft } from "./lib/form";
 import { shortPlace } from "./lib/format";
@@ -49,6 +52,10 @@ export function App() {
     selected: null,
   });
   const draftRef = useRef<TripDraft | null>(null);
+  const [recent, setRecent] = useState<TripTemplate[]>(() => loadRecentTrips());
+  const [draftSync, setDraftSync] = useState<{ draft: TripDraft; token: number } | null>(null);
+  const [toast, setToast] = useState<{ text: string; id: number } | null>(null);
+  const [sharedDraft] = useState(() => (typeof window === "undefined" ? null : searchToDraft(window.location.search)));
   const frameRef = useRef<{ hour: number; variable: HeatVariable; visible: boolean }>({
     hour: 0,
     variable: "risk",
@@ -172,6 +179,11 @@ export function App() {
       setSubmitted(draft);
       setEditing(false);
       setStatus("ready");
+      const template = draftToTemplate(draft);
+      if (template) setRecent(rememberTrip(template));
+      // The address bar always holds a link that reopens this exact trip.
+      const search = draftToSearch(draft);
+      if (search) window.history.replaceState(null, "", `${window.location.pathname}${search}`);
       queued.current = { plan: next, heat: null, selected: next.recommended_route_id };
       mapRef.current?.setPlan(next);
       void loadHeat(next.plan_id);
@@ -183,6 +195,31 @@ export function App() {
       setPlanError(describeApiError(error, "The routing service could not be reached."));
       setPlanRetryable(isRetryable(error));
       setServerErrors(fieldErrors(error instanceof ApiError ? error.fields : undefined));
+    }
+  }
+
+  /** Plans a trip that did not come from the form (example, recent trip, shared link) and mirrors it there. */
+  function startTrip(draft: TripDraft) {
+    setDraftSync((current) => ({ draft, token: (current?.token ?? 0) + 1 }));
+    void run(draft);
+  }
+  const startRef = useRef(startTrip);
+  useLayoutEffect(() => {
+    startRef.current = startTrip;
+  });
+  // A shared link opens straight into its plan.
+  useEffect(() => {
+    if (sharedDraft) startRef.current(sharedDraft);
+  }, [sharedDraft]);
+
+  const notify = useCallback((text: string) => setToast({ text, id: Date.now() }), []);
+  const clearToast = useCallback(() => setToast(null), []);
+  async function shareTrip() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      notify("Link copied. Anyone who opens it sees this trip.");
+    } catch {
+      notify("Copy the address bar to share this trip.");
     }
   }
 
@@ -255,6 +292,11 @@ export function App() {
     );
   }, []);
 
+  const [following, setFollowing] = useState(false);
+  const followTruck = useCallback((on: boolean) => {
+    mapRef.current?.setChase(on);
+  }, []);
+
   const onFocusCheckpoint = useCallback((routeId: string, index: number | null) => {
     mapRef.current?.setFocus(index == null ? null : routeId, index ?? undefined);
   }, []);
@@ -285,13 +327,23 @@ export function App() {
       </p>
       <div className="map-stage">
         <Suspense fallback={<MapSkeleton />}>
-          <MapCanvas onReady={onReady} onInspect={openCheckpoint} onSelect={selectRoute} />
+          <MapCanvas onReady={onReady} onInspect={openCheckpoint} onSelect={selectRoute} onChaseChange={setFollowing} />
         </Suspense>
       </div>
       <header className="mast" data-map-overlay="" data-overlay-edge="left" data-overlay-edge-mobile="top">
-        <h1>Headwind</h1>
+        <h1 className="brand">
+          <BrandMark />
+          <span>Headwind</span>
+        </h1>
         <div className="mast-actions">
-          {mocks && <p className="demo-badge">Demo data</p>}
+          {mocks ? (
+            <p className="demo-badge">Demo data</p>
+          ) : (
+            <p className="live-badge" title="Truck routes from TomTom, hourly forecasts from Open-Meteo">
+              <span className="live-dot" aria-hidden="true" />
+              Live
+            </p>
+          )}
           <button
             type="button"
             className="icon-btn"
@@ -318,11 +370,11 @@ export function App() {
         <TripSheet
           title={title}
           settleKey={status === "ready" ? plan?.plan_id : null}
-          lowerKey={inspect ? `${inspect.route.id}:${inspect.checkpoint.index}` : null}
+          lowerKey={inspect ? `${inspect.route.id}:${inspect.checkpoint.index}` : tripPlaying ? "drive" : null}
         >
           {status === "empty" && <EmptyState />}
           {submitted && status === "ready" && !editing && (
-            <TripSummary draft={submitted} onEdit={() => setEditing(true)} />
+            <TripSummary draft={submitted} onEdit={() => setEditing(true)} onShare={() => void shareTrip()} />
           )}
           {status === "loading" && pending && <TripSummary draft={pending} busy />}
           <div hidden={status === "loading" || (status === "ready" && !editing)}>
@@ -331,11 +383,15 @@ export function App() {
               serverErrors={serverErrors}
               search={async (query, signal) => (await api.geocode(query, signal)).results}
               departureSync={departureSync}
+              draftSync={draftSync}
               onPlan={(draft) => {
                 void run(draft);
               }}
             />
           </div>
+          {status === "empty" && (
+            <QuickStart recent={recent} disabled={false} onPick={(trip) => startTrip(templateToDraft(trip))} />
+          )}
           {status === "loading" && <RouteSkeleton />}
           {status === "error" && (
             <ErrorNote
@@ -349,6 +405,7 @@ export function App() {
               }
             />
           )}
+          {plan && status === "ready" && <div id="drive-slot" />}
           {plan && status === "ready" && (
             <RouteList
               plan={plan}
@@ -381,6 +438,8 @@ export function App() {
                     onHour={setFollowHour}
                     onPlaying={setTripPlaying}
                     onFocusCheckpoint={onFocusCheckpoint}
+                    following={following}
+                    onFollow={followTruck}
                   />
                 )
               }
@@ -405,7 +464,20 @@ export function App() {
       {inspect && (
         <CheckpointDialog route={inspect.route} checkpoint={inspect.checkpoint} onClose={closeInspect} />
       )}
+      <ToastRegion>{toast && <ToastMessage key={toast.id} text={toast.text} onDone={clearToast} />}</ToastRegion>
     </div>
+  );
+}
+
+/** Wind streaks bending into a road: the product in one glyph. */
+function BrandMark() {
+  return (
+    <svg className="brand-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
+      <rect width="28" height="28" rx="8" fill="var(--accent)" />
+      <path d="M6 10.5h10.5a2.5 2.5 0 1 0-2.5-2.5" fill="none" stroke="var(--on-accent)" strokeWidth="2" strokeLinecap="round" />
+      <path d="M6 15h14a2.5 2.5 0 1 1-2.5 2.5" fill="none" stroke="var(--on-accent)" strokeWidth="2" strokeLinecap="round" />
+      <path d="M6 19.5h6" fill="none" stroke="var(--on-accent)" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+    </svg>
   );
 }
 

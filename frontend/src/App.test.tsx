@@ -225,3 +225,37 @@ describe("App against backend payloads", () => {
     });
   });
 });
+
+describe("App as a product: shared links, examples and recent trips", () => {
+  it("opens a shared link straight into its plan and keeps the link in the address bar", async () => {
+    planRoutes.mockResolvedValue(planSample as unknown as PlanResponse);
+    fetchHeatmap.mockResolvedValue(heatmapSample as unknown as HeatmapResponse);
+    window.history.replaceState(
+      null,
+      "",
+      "/?from=37.80440,-122.27120,Oakland, CA, USA&to=39.52960,-119.81380,Reno, NV, USA&at=2099-01-01T08:00&load=42000&every=10&hos=1",
+    );
+    render(<App />);
+    expect(await screen.findAllByTestId("route-card")).toHaveLength(3);
+    const request = planRoutes.mock.calls[0][0];
+    expect(request.origin).toMatchObject({ lat: 37.8044, lon: -122.2712, label: "Oakland, CA, USA" });
+    expect(request.destination.label).toBe("Reno, NV, USA");
+    expect(request).toMatchObject({ load_lbs: 42000, interval_mi: 10, hos: true });
+    expect(window.location.search).toContain("from=");
+  });
+
+  it("plans an example in one click and lists it under recent trips next time", async () => {
+    planRoutes.mockResolvedValue(planSample as unknown as PlanResponse);
+    fetchHeatmap.mockResolvedValue(heatmapSample as unknown as HeatmapResponse);
+    const user = userEvent.setup();
+    const first = render(<App />);
+    await user.click(screen.getByRole("button", { name: /Chicago → Nashville/ }));
+    expect(await screen.findAllByTestId("route-card")).toHaveLength(3);
+    expect(planRoutes.mock.calls[0][0].destination.label).toBe("Nashville, TN, USA");
+    first.unmount();
+    window.history.replaceState(null, "", "/");
+    render(<App />);
+    const recent = screen.getByRole("region", { name: "Recent trips" });
+    expect(within(recent).getByRole("button", { name: /Chicago → Nashville/ })).toBeInTheDocument();
+  });
+});

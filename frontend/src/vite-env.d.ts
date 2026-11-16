@@ -19,6 +19,10 @@ interface SpotterProbe {
   mapRenders: number;
   frame: number;
   variable: string;
+  /** The three.js truck layer is on the map. */
+  truck3d?: boolean;
+  /** The chase camera is following the truck. */
+  chase?: boolean;
 }
 
 interface Window {

@@ -14,8 +14,9 @@ function setup() {
     onHour: vi.fn(),
     onPlaying: vi.fn(),
     onFocusCheckpoint: vi.fn(),
+    onFollow: vi.fn(),
   };
-  const view = render(<TripProfile route={route} heatStartIso={route.departure} {...handlers} />);
+  const view = render(<TripProfile route={route} heatStartIso={route.departure} following={false} {...handlers} />);
   return { ...handlers, ...view };
 }
 
