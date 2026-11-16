@@ -1,4 +1,5 @@
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from math import ceil, floor, isfinite
@@ -13,6 +14,9 @@ from .http import cache_key, get_json, utc_iso
 from .sampling import Coord
 
 logger = logging.getLogger(__name__)
+BATCH_SIZE = 100
+MAX_PARALLEL = 4
+WEATHER_TIMEOUT_S = 15
 VARIABLES = ("wind_speed_10m", "wind_gusts_10m", "rain", "showers", "snowfall",
              "temperature_2m", "weather_code")
 
@@ -55,8 +59,7 @@ def fetch_forecasts(coords: list[Coord]) -> dict[Coord, dict | None]:
     commercial = bool(settings.OPEN_METEO_API_KEY)
     url = ("https://customer-api.open-meteo.com/v1/forecast" if commercial
            else "https://api.open-meteo.com/v1/forecast")
-    for start in range(0, len(missing), 100):
-        batch = missing[start:start + 100]
+    def fetch_batch(batch: list[Coord]) -> None:
         params = {
             "latitude": ",".join(f"{c[1]:g}" for c in batch),
             "longitude": ",".join(f"{c[0]:g}" for c in batch),
@@ -67,7 +70,7 @@ def fetch_forecasts(coords: list[Coord]) -> dict[Coord, dict | None]:
         if commercial:
             params["apikey"] = settings.OPEN_METEO_API_KEY
         try:
-            payload = get_json(url, params)
+            payload = get_json(url, params, timeout=WEATHER_TIMEOUT_S)
             items = payload if isinstance(payload, list) else [payload]
             if len(items) != len(batch):
                 raise ValueError("Mismatched locations")
@@ -80,6 +83,11 @@ def fetch_forecasts(coords: list[Coord]) -> dict[Coord, dict | None]:
                 cache.set(keys[coord], forecast, 30 * 60)
         except (UpstreamError, TypeError, ValueError):
             logger.warning("Weather batch unavailable; affected checkpoints remain unknown.")
+
+    batches = [missing[start:start + BATCH_SIZE] for start in range(0, len(missing), BATCH_SIZE)]
+    # Batches are independent: fetch them together so a slow one does not add up serially.
+    with ThreadPoolExecutor(max_workers=max(1, min(MAX_PARALLEL, len(batches)))) as pool:
+        list(pool.map(fetch_batch, batches))
     return result
 
 

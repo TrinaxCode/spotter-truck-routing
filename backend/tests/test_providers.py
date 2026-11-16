@@ -17,6 +17,7 @@ WEATHER = "https://api.open-meteo.com/v1/forecast"
 DEPARTURE = datetime(2026, 11, 16, 14, tzinfo=UTC)
 
 
+@freeze_time("2026-11-15T14:00:00Z")
 def test_tomtom_verified_parameters_and_piecewise_eta(settings, no_network, fixture_json):
     settings.TOMTOM_API_KEY = "test-key"
     no_network.get(ROUTING, json=fixture_json("tomtom_routes.json"))

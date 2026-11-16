@@ -272,6 +272,7 @@ def test_geocode_api_maps_real_provider_fields_and_uses_cache(settings, no_netwo
     assert len(no_network.calls) == 1
 
 
+@freeze_time("2026-11-15T14:00:00Z")
 def test_unknown_api_path_and_crashes_use_the_json_error_envelope(monkeypatch):
     client = APIClient(raise_request_exception=False)
     missing = client.get("/api/nope")
