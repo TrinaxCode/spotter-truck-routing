@@ -57,6 +57,9 @@ CACHES = {"default": {
     "OPTIONS": {"MAX_ENTRIES": 10000},
 }}
 TOMTOM_API_KEY = os.getenv("TOMTOM_API_KEY", "")
+# Service-wide daily budget of real TomTom HTTP calls (routing incl. via points, and geocoding),
+# charged right before each call. The free tier allows 2,500; the margin absorbs worker races.
+PROVIDER_DAILY_BUDGET = {"tomtom": int(os.getenv("TOMTOM_DAILY_BUDGET", "2200"))}
 OPEN_METEO_API_KEY = os.getenv("OPEN_METEO_API_KEY", "")
 # Cargo is specified by the request; routing restrictions require gross vehicle weight.
 TRUCK_TARE_LBS = float(os.getenv("TRUCK_TARE_LBS", "35000"))
@@ -86,10 +89,9 @@ REST_FRAMEWORK = {
         "plan": os.getenv("THROTTLE_PLAN", "12/min"),
         "geocode": os.getenv("THROTTLE_GEOCODE", "60/min"),
         "plan_data": os.getenv("THROTTLE_PLAN_DATA", "120/min"),
-        # Whole-service daily budgets: many clients together must not exhaust the provider quota
-        # (300 plans x up to 5 TomTom calls + geocoding stays under 2,500 calls a day).
-        "plan_global": os.getenv("THROTTLE_PLAN_GLOBAL", "300/day"),
-        "geocode_global": os.getenv("THROTTLE_GEOCODE_GLOBAL", "800/day"),
+        # Per-client daily caps, well below the service budget, so one client cannot drain it.
+        "plan_daily": os.getenv("THROTTLE_PLAN_DAILY", "60/day"),
+        "geocode_daily": os.getenv("THROTTLE_GEOCODE_DAILY", "300/day"),
     },
     # 0 = trust only REMOTE_ADDR. Behind Railway's edge set 1: DRF then takes the entry that proxy
     # appended to X-Forwarded-For. Never None, which would trust a client-supplied header.

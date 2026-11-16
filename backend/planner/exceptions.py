@@ -10,6 +10,13 @@ class UpstreamError(APIException):
     default_code = "upstream_error"
 
 
+class ProviderBudgetExhausted(APIException):
+    status_code = 503
+    default_detail = ("Today's routing capacity is used up. Trips planned earlier still open from "
+                      "their links; please try again tomorrow.")
+    default_code = "provider_budget_exhausted"
+
+
 class NotConfigured(APIException):
     status_code = 503
     default_detail = "Routing is not configured. Set TOMTOM_API_KEY on the server."

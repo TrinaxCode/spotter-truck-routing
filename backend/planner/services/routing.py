@@ -10,8 +10,9 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 
-from planner.exceptions import NotConfigured, UpstreamError
+from planner.exceptions import NotConfigured, ProviderBudgetExhausted, UpstreamError
 
+from .budget import spend
 from .http import cache_key, get_json, utc_iso
 from .sampling import (
     METERS_PER_MILE,
@@ -101,6 +102,7 @@ class TomTomProvider:
         points = (origin, via, destination) if via else (origin, destination)
         # `:g` keeps 6 significant digits, which truncates longitudes west of -100 to ~100 m.
         locations = ":".join(f"{lat:.6f},{lon:.6f}" for lon, lat in points)
+        spend("tomtom")
         payload = get_json(f"https://api.tomtom.com/routing/1/calculateRoute/{locations}/json", {
             "key": settings.TOMTOM_API_KEY, "travelMode": "truck", "vehicleCommercial": "true",
             "vehicleWeight": round((load_lbs + settings.TRUCK_TARE_LBS) * .45359237),
@@ -163,8 +165,9 @@ def get_routes(
             try:
                 return provider.calculate_routes(origin, destination, departure, load_lbs,
                                                  via=via, max_alternatives=0)
-            except UpstreamError:
-                # A via point can be inaccessible; keep real successful routes.
+            except (UpstreamError, ProviderBudgetExhausted):
+                # A via point can be inaccessible, or the day's budget can run out mid-search;
+                # either way keep the real routes already found.
                 return []
 
         vias = via_points(origin, destination)

@@ -5,6 +5,7 @@ from django.core.cache import cache
 
 from planner.exceptions import NotConfigured, UpstreamError
 
+from .budget import spend
 from .http import cache_key, get_json
 
 
@@ -15,6 +16,7 @@ def geocode(query: str) -> list[dict]:
     cached = cache.get(key)
     if cached is not None:
         return cached
+    spend("tomtom")
     payload = get_json(f"https://api.tomtom.com/search/2/search/{quote(query, safe='')}.json", {
         "key": settings.TOMTOM_API_KEY, "countrySet": "US,CA", "limit": 6,
     })

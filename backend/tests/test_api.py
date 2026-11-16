@@ -369,17 +369,3 @@ def test_ipv6_clients_share_their_64_block(monkeypatch):
     assert client.get("/api/geocode?q=a", REMOTE_ADDR="2001:db8:1:2::beef").status_code == 429
     assert client.get("/api/geocode?q=a", REMOTE_ADDR="2001:db8:1:3::1").status_code == 400
 
-
-def test_service_budget_caps_all_clients_and_ignores_rejected_requests(monkeypatch):
-    from planner import views
-
-    client_throttle, budget = views.geocode_view.cls.throttle_classes
-    monkeypatch.setattr(client_throttle, "THROTTLE_RATES", {"geocode": "1/min"})
-    monkeypatch.setattr(budget, "THROTTLE_RATES", {"geocode_global": "3/day"})
-    client = APIClient()
-    # One noisy client is stopped by its own limit and does not burn the shared budget.
-    noisy = [client.get("/api/geocode?q=a", REMOTE_ADDR="10.1.0.1").status_code for _ in range(4)]
-    assert noisy == [400, 429, 429, 429]
-    others = [client.get("/api/geocode?q=a", REMOTE_ADDR=f"10.1.0.{n}").status_code
-              for n in (2, 3, 4)]
-    assert others == [400, 400, 429]
