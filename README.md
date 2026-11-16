@@ -15,6 +15,19 @@ Plan a truck trip, get three route options, and see which one is safest given th
 6. The map shows every route, checkpoint, risk level and ETA, plus a corridor heatmap with a 0–48 h slider (Risk / Wind / Rain / Snow).
 7. Departure options compare the next 24 hours on the same routes and suggest the earliest strictly safer departure, when one exists.
 
+### Beyond the brief (all serving the same decision: which route, and when)
+
+| Feature | What it gives a dispatcher |
+|---|---|
+| **Best time to leave** | A 24-hour strip re-scores the same routes for later departures and suggests the earliest one that is strictly safer, with one-click Apply. No extra routing calls. |
+| **Drive mode** | A 3D truck (three.js, lazy-loaded) drives the selected route on a tilted chase camera, pausing at HOS stops, while the heatmap follows the truck's hour. A HUD shows clock, mile, live weather and the next hazard or stop. |
+| **Weather profile** | Per-mile chart of risk, sustained wind (with the 25/35/45/55 mph thresholds), precipitation and HOS stops, synced with the map. |
+| **Driver briefing** | Print or save as PDF: the recommendation, all routes compared and the full checkpoint log (ETA, risk, wind/gust, rain, snow, temperature, reasons). |
+| **Share links, recent trips, examples** | The address bar always reopens the current trip; recent trips stay in the browser; four example trips start a plan in one click. |
+| **Touch gestures** | Draggable bottom sheet with velocity snapping, swipe between routes, scrub the departure strip and the weather chart, long-press the map to inspect, two-finger rotate/tilt in drive mode. Every gesture has a button or keyboard equivalent. |
+| **Keyboard shortcuts** | `1` `2` `3` routes, `D` drive, `E` edit, `S` share, `P` print, `T` theme, `?` help. |
+| **Provider protection** | Per-client rate limits plus a service-wide daily budget of real TomTom calls, so a public demo cannot exhaust the free quota. |
+
 ## Architecture
 
 ```
@@ -78,7 +91,7 @@ cd frontend && npm run typecheck && npm run lint && npm run test && npm run buil
 ```
 
 - **Backend:** about 490 tests with no network access. They pin every risk boundary and load rule, each ranking tie-break, checkpoint spacing, ETA interpolation, HOS, the heatmap grid and the API error shapes. `tests/spec/` is an independent black-box suite written only from `SPEC.md`.
-- **Frontend:** unit tests and a contract test against real backend payloads. Playwright E2E covers plan → select route → slide heatmap → checkpoint popup at 375, 768 and 1280 px, and asserts the slider never rebuilds the map source.
+- **Frontend:** unit tests and a contract test against real backend payloads. Playwright E2E (45 tests) covers plan → select route → slide heatmap → checkpoint popup, drive mode, departure suggestions and touch gestures at 375, 768 and 1280 px, and asserts the slider and the playback never rebuild the map sources.
 
 ## Limitations
 
