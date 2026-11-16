@@ -259,3 +259,29 @@ describe("App as a product: shared links, examples and recent trips", () => {
     expect(within(recent).getByRole("button", { name: /Chicago → Nashville/ })).toBeInTheDocument();
   });
 });
+
+describe("keyboard shortcuts", () => {
+  it("selects routes by rank, but not while a control has the keys", async () => {
+    planRoutes.mockResolvedValue(planSample as unknown as PlanResponse);
+    fetchHeatmap.mockResolvedValue(heatmapSample as unknown as HeatmapResponse);
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Plan routes" }));
+    await screen.findAllByTestId("route-card");
+    const routes = (planSample as unknown as PlanResponse).routes;
+    const pressed = () => document.querySelector('.route-main[aria-pressed="true"]');
+    const first = routes.find((route) => route.rank === 1)!;
+    const second = routes.find((route) => route.rank === 2)!;
+
+    // The forecast slider owns its keys: a digit there must not switch routes.
+    const slider = await screen.findByTestId("heatmap-slider");
+    await waitFor(() => expect(slider).toBeEnabled());
+    slider.focus();
+    await user.keyboard("2");
+    expect(pressed()).toHaveTextContent(first.label);
+
+    slider.blur();
+    await user.keyboard("2");
+    expect(pressed()).toHaveTextContent(second.label);
+  });
+});

@@ -6,6 +6,7 @@ import { formatReadout, readoutAtMile } from "../lib/profile";
 import { buildTimeline, nearestCheckpoint, type TripSample } from "../lib/tripTimeline";
 import { onRadioKeyDown } from "../lib/radio";
 import { DriveHud } from "./DriveHud";
+import { DRIVE_TOGGLE_EVENT } from "../lib/shortcuts";
 import { WeatherProfile } from "./WeatherProfile";
 
 interface TripProfileProps {
@@ -55,6 +56,22 @@ export function TripProfile({
     },
     [route, timeline, onFocusCheckpoint],
   );
+
+  // The "D" shortcut drives (or pauses) the selected route without a handle on this component.
+  const playbackRef = useRef(playback);
+  useEffect(() => {
+    playbackRef.current = playback;
+  });
+  useEffect(() => {
+    const onDrive = () => {
+      const current = playbackRef.current;
+      if (reduceMotion) current.step(1);
+      else if (current.status === "playing") current.pause();
+      else current.play();
+    };
+    window.addEventListener(DRIVE_TOGGLE_EVENT, onDrive);
+    return () => window.removeEventListener(DRIVE_TOGGLE_EVENT, onDrive);
+  }, [reduceMotion]);
 
   // Leaving the route removes the ring from the map along with the chart.
   useEffect(() => {

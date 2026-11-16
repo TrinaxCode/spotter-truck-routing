@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom";
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiError, describeApiError, flattenFieldErrors, isRetryable, type FieldIssues } from "./api/errors";
 import { api } from "./api/client";
@@ -19,6 +20,9 @@ import { TripProfile } from "./components/TripProfile";
 import { TripSheet } from "./components/TripSheet";
 import { TripSummary } from "./components/TripSummary";
 import { QuickStart } from "./components/QuickStart";
+import { DriverBriefing } from "./components/DriverBriefing";
+import { ShortcutsDialog } from "./components/ShortcutsDialog";
+import { DRIVE_TOGGLE_EVENT, shortcutFor } from "./lib/shortcuts";
 import { ToastMessage, ToastRegion } from "./components/Toast";
 import { draftToSearch, draftToTemplate, loadRecentTrips, rememberTrip, searchToDraft, templateToDraft, type TripTemplate } from "./lib/trips";
 import { heatmapCoverage, type HeatCoverage } from "./lib/heatmap";
@@ -211,6 +215,57 @@ export function App() {
     if (sharedDraft) startRef.current(sharedDraft);
   }, [sharedDraft]);
 
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try {
+      localStorage.setItem("headwind-theme", next);
+    } catch {
+      // Storage can be blocked; the theme still applies for this visit.
+    }
+    setTheme(next);
+    mapRef.current?.setBasemap(next);
+  }
+
+  // The briefing exists only while printing (button, "P" or the browser's own print command).
+  const [printing, setPrinting] = useState(false);
+  useEffect(() => {
+    const before = () => flushSync(() => setPrinting(true));
+    const after = () => setPrinting(false);
+    window.addEventListener("beforeprint", before);
+    window.addEventListener("afterprint", after);
+    return () => {
+      window.removeEventListener("beforeprint", before);
+      window.removeEventListener("afterprint", after);
+    };
+  }, []);
+
+  const [helpOpen, setHelpOpen] = useState(false);
+  const shortcutRef = useRef<(event: KeyboardEvent) => void>(() => undefined);
+  useLayoutEffect(() => {
+    shortcutRef.current = (event: KeyboardEvent) => {
+      const action = shortcutFor(event);
+      if (!action || helpOpen) return;
+      const ready = status === "ready" && plan != null;
+      if (action === "help") setHelpOpen(true);
+      else if (action === "theme") toggleTheme();
+      else if (!ready) return;
+      else if (action.startsWith("route-")) {
+        const route = plan.routes.find((item) => item.rank === Number(action.slice(6)));
+        if (route) selectRoute(route.id);
+      } else if (action === "drive") window.dispatchEvent(new Event(DRIVE_TOGGLE_EVENT));
+      else if (action === "edit") setEditing(true);
+      else if (action === "share") void shareTrip();
+      else if (action === "print") window.print();
+      event.preventDefault();
+    };
+  });
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => shortcutRef.current(event);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const notify = useCallback((text: string) => setToast({ text, id: Date.now() }), []);
   const clearToast = useCallback(() => setToast(null), []);
   async function shareTrip() {
@@ -337,20 +392,19 @@ export function App() {
           <button
             type="button"
             className="icon-btn"
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts (?)"
+            onClick={() => setHelpOpen(true)}
+          >
+            <KeyboardIcon />
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
             aria-label="Dark theme"
             aria-pressed={theme === "dark"}
             title={theme === "dark" ? "Switch to the light theme" : "Switch to the dark theme"}
-            onClick={() => {
-              const next = theme === "dark" ? "light" : "dark";
-              document.documentElement.dataset.theme = next;
-              try {
-                localStorage.setItem("headwind-theme", next);
-              } catch {
-                // Storage can be blocked; the theme still applies for this visit.
-              }
-              setTheme(next);
-              mapRef.current?.setBasemap(next);
-            }}
+            onClick={toggleTheme}
           >
             {theme === "dark" ? <MoonIcon /> : <SunIcon />}
           </button>
@@ -364,7 +418,12 @@ export function App() {
         >
           {status === "empty" && <EmptyState />}
           {submitted && status === "ready" && !editing && (
-            <TripSummary draft={submitted} onEdit={() => setEditing(true)} onShare={() => void shareTrip()} />
+            <TripSummary
+              draft={submitted}
+              onEdit={() => setEditing(true)}
+              onShare={() => void shareTrip()}
+              onPrint={() => window.print()}
+            />
           )}
           {status === "loading" && pending && <TripSummary draft={pending} busy />}
           <div hidden={status === "loading" || (status === "ready" && !editing)}>
@@ -454,8 +513,32 @@ export function App() {
       {inspect && (
         <CheckpointDialog route={inspect.route} checkpoint={inspect.checkpoint} onClose={closeInspect} />
       )}
+      {printing && plan && status === "ready" && selectedRoute && submitted && (
+        <DriverBriefing
+          plan={plan}
+          route={selectedRoute}
+          origin={shortPlace(submitted.origin?.label ?? "Origin")}
+          destination={shortPlace(submitted.destination?.label ?? "Destination")}
+        />
+      )}
+      <ShortcutsDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
       <ToastRegion>{toast && <ToastMessage key={toast.id} text={toast.text} onDone={clearToast} />}</ToastRegion>
     </div>
+  );
+}
+
+function KeyboardIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true">
+      <rect x="2" y="5" width="16" height="10" rx="2.2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M5.5 8.5h1M9.5 8.5h1M13.5 8.5h1M6.5 11.8h7"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
