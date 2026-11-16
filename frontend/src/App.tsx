@@ -88,7 +88,6 @@ export function App() {
     document.documentElement.dataset.theme === "dark" ? "dark" : "light",
   );
 
-  const mocks = import.meta.env.VITE_USE_MOCKS === "true";
 
   function rememberPlan(next: PlanResponse | null) {
     planRef.current = next;
@@ -331,19 +330,10 @@ export function App() {
         </Suspense>
       </div>
       <header className="mast" data-map-overlay="" data-overlay-edge="left" data-overlay-edge-mobile="top">
-        <h1 className="brand">
-          <BrandMark />
-          <span>Headwind</span>
+        <h1 className="mast-title">
+          {status === "ready" ? "Route options" : status === "loading" ? "Planning…" : "Plan a trip"}
         </h1>
         <div className="mast-actions">
-          {mocks ? (
-            <p className="demo-badge">Demo data</p>
-          ) : (
-            <p className="live-badge" title="Truck routes from TomTom, hourly forecasts from Open-Meteo">
-              <span className="live-dot" aria-hidden="true" />
-              Live
-            </p>
-          )}
           <button
             type="button"
             className="icon-btn"
@@ -466,18 +456,6 @@ export function App() {
       )}
       <ToastRegion>{toast && <ToastMessage key={toast.id} text={toast.text} onDone={clearToast} />}</ToastRegion>
     </div>
-  );
-}
-
-/** Wind streaks bending into a road: the product in one glyph. */
-function BrandMark() {
-  return (
-    <svg className="brand-mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-      <rect width="28" height="28" rx="8" fill="var(--accent)" />
-      <path d="M6 10.5h10.5a2.5 2.5 0 1 0-2.5-2.5" fill="none" stroke="var(--on-accent)" strokeWidth="2" strokeLinecap="round" />
-      <path d="M6 15h14a2.5 2.5 0 1 1-2.5 2.5" fill="none" stroke="var(--on-accent)" strokeWidth="2" strokeLinecap="round" />
-      <path d="M6 19.5h6" fill="none" stroke="var(--on-accent)" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
-    </svg>
   );
 }
 

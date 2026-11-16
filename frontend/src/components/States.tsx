@@ -49,8 +49,8 @@ export function EmptyState() {
     <div className="empty">
       <h2>Plan around the weather</h2>
       <p>
-        Enter a trip. Headwind finds three truck routes, checks wind, rain and snow where you will be hour by
-        hour, and recommends the safest.
+        Enter a trip to compare three truck routes. Wind, rain and snow are checked where the truck will be,
+        hour by hour, and the safest route is recommended.
       </p>
     </div>
   );

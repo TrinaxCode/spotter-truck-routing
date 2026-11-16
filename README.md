@@ -1,4 +1,4 @@
-# Headwind — Weather-Aware Truck Routing
+# Weather-Aware Truck Routing
 
 Plan a truck trip, get three route options, and see which one is safest given the forecast **at the time the truck will actually be there**, its cargo weight, and travel time.
 

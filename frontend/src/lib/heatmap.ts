@@ -140,8 +140,9 @@ export function heatmapFillColor(variable: HeatVariable, hour: number): PaintExp
   return ["case", ["==", value, null], "rgba(0,0,0,0)", interpolate(value, RAMPS[variable].stops)];
 }
 
+// Low is a whisper so the corridor reads as "where it gets worse", not a green carpet.
 const RISK_OPACITY: [number, number][] = [
-  [0, 0.16],
+  [0, 0.07],
   [1, 0.42],
   [2, 0.52],
   [3, 0.6],
