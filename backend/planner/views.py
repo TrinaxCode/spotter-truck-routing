@@ -1,5 +1,6 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 
 from .serializers import (
     DepartureOptionsSerializer,
@@ -13,12 +14,23 @@ from .services.heatmap import get_heatmap
 from .services.planner import create_plan
 
 
+def scoped(scope: str):
+    """Rate-limit a function view per client IP under a DEFAULT_THROTTLE_RATES scope.
+
+    @api_view does not carry a `throttle_scope` attribute over to its view class, so each scope
+    gets its own throttle class instead of ScopedRateThrottle.
+    """
+    throttle = type(f"{scope.title().replace('_', '')}Throttle", (AnonRateThrottle,), {"scope": scope})
+    return throttle_classes([throttle])
+
+
 @api_view(["GET"])
 def health(request):
     return Response({"status": "ok"})
 
 
 @api_view(["GET"])
+@scoped("geocode")
 def geocode_view(request):
     serializer = GeocodeSerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)
@@ -26,6 +38,7 @@ def geocode_view(request):
 
 
 @api_view(["POST"])
+@scoped("plan")
 def plan_view(request):
     serializer = PlanSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -33,6 +46,7 @@ def plan_view(request):
 
 
 @api_view(["GET"])
+@scoped("plan_data")
 def heatmap_view(request):
     serializer = HeatmapSerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)
@@ -40,6 +54,7 @@ def heatmap_view(request):
 
 
 @api_view(["GET"])
+@scoped("plan_data")
 def departure_options_view(request):
     serializer = DepartureOptionsSerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)

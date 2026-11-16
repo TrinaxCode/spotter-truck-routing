@@ -1,6 +1,9 @@
 import os
 
 os.environ.setdefault("DJANGO_SECRET_KEY", "test-only-key-abcdefghijklmnopqrstuvwxyz-0123456789")
+# The suite plans many trips per minute; throttling has its own test with a tight rate.
+for scope in ("PLAN", "GEOCODE", "PLAN_DATA"):
+    os.environ.setdefault(f"THROTTLE_{scope}", "100000/min")
 
 from .settings import *  # noqa: E402,F403
 

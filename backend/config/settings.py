@@ -80,6 +80,15 @@ REST_FRAMEWORK = {
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
     "EXCEPTION_HANDLER": "planner.exceptions.api_exception_handler",
     "UNAUTHENTICATED_USER": None,
+    # Per-client limits protect the provider quotas (TomTom's free tier is 2,500 calls a day and a
+    # plan can use five). 429 responses carry Retry-After and the usual error envelope.
+    "DEFAULT_THROTTLE_RATES": {
+        "plan": os.getenv("THROTTLE_PLAN", "12/min"),
+        "geocode": os.getenv("THROTTLE_GEOCODE", "60/min"),
+        "plan_data": os.getenv("THROTTLE_PLAN_DATA", "120/min"),
+    },
+    # Behind Railway's edge the client address is the proxy-appended X-Forwarded-For entry.
+    "NUM_PROXIES": int(os.getenv("NUM_PROXIES", "0")) or None,
 }
 LOGGING = {
     "version": 1, "disable_existing_loggers": False,

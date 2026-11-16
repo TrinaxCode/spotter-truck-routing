@@ -316,3 +316,31 @@ def test_cors_follows_configured_origins(settings, origin, allowed):
                                    HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
                                    HTTP_ACCESS_CONTROL_REQUEST_HEADERS="content-type")
     assert ("access-control-allow-origin" in response.headers) is allowed
+
+
+def test_provider_backed_endpoints_are_rate_limited_per_client(monkeypatch):
+    from planner import views
+
+    throttle = views.geocode_view.cls.throttle_classes[0]
+    monkeypatch.setattr(throttle, "THROTTLE_RATES", {"geocode": "2/min"})
+    client = APIClient()
+    # Validation failures still count: the limit protects the server, not only the provider.
+    statuses = [client.get("/api/geocode?q=a", REMOTE_ADDR="10.0.0.1").status_code for _ in range(3)]
+    assert statuses == [400, 400, 429]
+    limited = client.get("/api/geocode?q=a", REMOTE_ADDR="10.0.0.1")
+    assert limited.json()["error"]["code"] == "throttled"
+    assert int(limited["Retry-After"]) > 0
+    # Another client has its own budget.
+    assert client.get("/api/geocode?q=a", REMOTE_ADDR="10.0.0.2").status_code == 400
+
+
+def test_every_provider_backed_view_has_a_throttle():
+    from planner import views
+
+    scopes = {
+        view.cls.throttle_classes[0].scope
+        for view in (views.geocode_view, views.plan_view, views.heatmap_view, views.departure_options_view)
+    }
+    assert scopes == {"geocode", "plan", "plan_data"}
+    # The platform health check must never be throttled.
+    assert not views.health.cls.throttle_classes
