@@ -86,9 +86,14 @@ REST_FRAMEWORK = {
         "plan": os.getenv("THROTTLE_PLAN", "12/min"),
         "geocode": os.getenv("THROTTLE_GEOCODE", "60/min"),
         "plan_data": os.getenv("THROTTLE_PLAN_DATA", "120/min"),
+        # Whole-service daily budgets: many clients together must not exhaust the provider quota
+        # (300 plans x up to 5 TomTom calls + geocoding stays under 2,500 calls a day).
+        "plan_global": os.getenv("THROTTLE_PLAN_GLOBAL", "300/day"),
+        "geocode_global": os.getenv("THROTTLE_GEOCODE_GLOBAL", "800/day"),
     },
-    # Behind Railway's edge the client address is the proxy-appended X-Forwarded-For entry.
-    "NUM_PROXIES": int(os.getenv("NUM_PROXIES", "0")) or None,
+    # 0 = trust only REMOTE_ADDR. Behind Railway's edge set 1: DRF then takes the entry that proxy
+    # appended to X-Forwarded-For. Never None, which would trust a client-supplied header.
+    "NUM_PROXIES": int(os.getenv("NUM_PROXIES", "0")),
 }
 LOGGING = {
     "version": 1, "disable_existing_loggers": False,

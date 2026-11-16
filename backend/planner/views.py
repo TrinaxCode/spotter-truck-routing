@@ -1,6 +1,8 @@
+from ipaddress import ip_address, ip_network
+
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, SimpleRateThrottle
 
 from .serializers import (
     DepartureOptionsSerializer,
@@ -14,15 +16,51 @@ from .services.heatmap import get_heatmap
 from .services.planner import create_plan
 
 
-def scoped(scope: str):
-    """Rate-limit a function view per client IP under a DEFAULT_THROTTLE_RATES scope.
+class ClientThrottle(AnonRateThrottle):
+    """Per-client limit; IPv6 clients are keyed by /64, the block one subscriber usually holds."""
+
+    def get_ident(self, request):
+        ident = super().get_ident(request)
+        try:
+            address = ip_address(ident)
+        except ValueError:
+            return ident
+        return str(ip_network(f"{address}/64", strict=False)) if address.version == 6 else ident
+
+    def allow_request(self, request, view):
+        allowed = super().allow_request(request, view)
+        if not allowed:
+            # DRF runs every throttle; tell the service budget not to charge a rejected request.
+            request.client_throttled = True
+        return allowed
+
+
+class ServiceBudget(SimpleRateThrottle):
+    """One shared counter per scope for the whole service: protects the provider's daily quota."""
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {"scope": self.scope, "ident": "all"}
+
+    def allow_request(self, request, view):
+        if getattr(request, "client_throttled", False):
+            return True
+        return super().allow_request(request, view)
+
+
+def scoped(scope: str, budget: str | None = None):
+    """Rate-limit a function view per client (and optionally against a service-wide budget).
 
     @api_view does not carry a `throttle_scope` attribute over to its view class, so each scope
     gets its own throttle class instead of ScopedRateThrottle.
     """
-    name = f"{scope.title().replace('_', '')}Throttle"
-    throttle = type(name, (AnonRateThrottle,), {"scope": scope})
-    return throttle_classes([throttle])
+    def named(base, name):
+        class_name = f"{name.title().replace('_', '')}Throttle"
+        return type(class_name, (base,), {"scope": name})
+
+    throttles = [named(ClientThrottle, scope)]
+    if budget:
+        throttles.append(named(ServiceBudget, budget))
+    return throttle_classes(throttles)
 
 
 @api_view(["GET"])
@@ -31,7 +69,7 @@ def health(request):
 
 
 @api_view(["GET"])
-@scoped("geocode")
+@scoped("geocode", budget="geocode_global")
 def geocode_view(request):
     serializer = GeocodeSerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)
@@ -39,7 +77,7 @@ def geocode_view(request):
 
 
 @api_view(["POST"])
-@scoped("plan")
+@scoped("plan", budget="plan_global")
 def plan_view(request):
     serializer = PlanSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)

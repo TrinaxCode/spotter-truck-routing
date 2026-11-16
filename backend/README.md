@@ -29,7 +29,8 @@ returns HTTP 503 with `error.code=not_configured`; geocoding has the same safegu
 | `CACHE_DIR` | `backend/.cache`; private writable filesystem shared by all workers. |
 | `TRUCK_TARE_LBS` | `35000`; assumed tractor/trailer empty weight, added to cargo for routing. |
 | `THROTTLE_PLAN`, `THROTTLE_GEOCODE`, `THROTTLE_PLAN_DATA` | Per-IP limits (`12/min`, `60/min`, `120/min`); 429 with `Retry-After` and the error envelope. |
-| `NUM_PROXIES` | `0` locally; set `1` on Railway so limits key on the client IP from `X-Forwarded-For`, not the proxy. |
+| `THROTTLE_PLAN_GLOBAL`, `THROTTLE_GEOCODE_GLOBAL` | Service-wide daily budgets (`300/day`, `800/day`) that keep all clients together under the TomTom quota; requests already rejected per client are not charged. |
+| `NUM_PROXIES` | `0` (default) trusts only `REMOTE_ADDR`, so a client cannot spoof `X-Forwarded-For`. Set exactly `1` on Railway. IPv6 clients are limited per `/64`. |
 | `SECURE_SSL_REDIRECT` | `true` in production, `false` in debug. |
 | `RAILWAY_PUBLIC_DOMAIN` | Provided by Railway; it and `healthcheck.railway.app` are allowed hosts automatically. |
 
