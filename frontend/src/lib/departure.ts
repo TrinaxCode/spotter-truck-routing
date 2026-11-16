@@ -112,8 +112,12 @@ export function stripSummary(bars: readonly StripBar[]): string {
 }
 
 /** Copy for "no better time": names the planned time instead of "now" when it is not now. */
-export function stayLabel(departureIso: string, generatedAtIso: string): string {
+export function isDepartingNow(departureIso: string, generatedAtIso: string): boolean {
   const gap = Date.parse(departureIso) - Date.parse(generatedAtIso);
-  const lead = Number.isNaN(gap) || gap < 90 * 60_000 ? "Leaving now" : "Leaving at your planned time";
+  return Number.isNaN(gap) || gap < 90 * 60_000;
+}
+
+export function stayLabel(departureIso: string, generatedAtIso: string): string {
+  const lead = isDepartingNow(departureIso, generatedAtIso) ? "Leaving now" : "Leaving at your planned time";
   return `${lead} is already the lowest-risk option in the next 24 h.`;
 }

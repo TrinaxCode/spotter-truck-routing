@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { DepartureOption, DepartureOptionsResponse, DepartureRouteScore } from "../api/types";
-import { MIN_BAR, barHeight, describeBar, riskyMiles, stayLabel, stripBars, stripSummary } from "./departure";
+import {
+  MIN_BAR,
+  barHeight,
+  describeBar,
+  isDepartingNow,
+  riskyMiles,
+  stayLabel,
+  stripBars,
+  stripSummary,
+} from "./departure";
 
 function score(
   id: string,
@@ -109,5 +118,12 @@ describe("departure strip scaling", () => {
     expect(stayLabel("2026-11-17T15:00:00Z", "2026-11-15T14:30:00Z")).toBe(
       "Leaving at your planned time is already the lowest-risk option in the next 24 h.",
     );
+  });
+});
+
+describe("isDepartingNow", () => {
+  it("labels hour 0 as now only when departure is within 90 minutes of planning", () => {
+    expect(isDepartingNow("2026-11-15T15:00:00Z", "2026-11-15T14:30:00Z")).toBe(true);
+    expect(isDepartingNow("2026-11-16T14:00:00Z", "2026-11-15T22:30:00Z")).toBe(false);
   });
 });

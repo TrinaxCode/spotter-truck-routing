@@ -1,6 +1,6 @@
 import { useId, useMemo, useState, type CSSProperties } from "react";
 import type { DepartureOptionsResponse } from "../api/types";
-import { stayLabel, stripBars, stripSummary } from "../lib/departure";
+import { isDepartingNow, stayLabel, stripBars, stripSummary } from "../lib/departure";
 import { forecastTicks } from "../lib/format";
 import { onRadioKeyDown } from "../lib/radio";
 
@@ -144,7 +144,9 @@ function ReadyStrip({
               className="strip-tick"
               style={{ "--at": (tick.hour + 0.5) / slots } as CSSProperties}
             >
-              {tick.hour === 0 ? "Now" : tick.day ? `${tick.day} ${tick.time}` : tick.time}
+              {tick.hour === 0 && isDepartingNow(data.base_departure, generatedAt)
+                ? "Now"
+                : tick.day ? `${tick.day} ${tick.time}` : tick.time}
             </span>
           ))}
         </div>
