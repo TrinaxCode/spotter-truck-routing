@@ -9,8 +9,10 @@ import { formatInchesPerHour, formatMiles, formatShortClock, formatSpeedMph, for
 import { NEUTRAL_ROUTE_COLOR, riskColor } from "../lib/riskColor";
 import { segmentRoute } from "../lib/routeSegments";
 import { etaHourIndex, floorHourIso } from "../lib/time";
-import type { MapHandle, TruckPosition } from "./handle";
+import type { MapGestureProbe, MapHandle, TruckPosition } from "./handle";
 import type { Truck3D } from "./truck3d";
+import { distanceToLine, hapticHint, LONG_PRESS_MS, nearestPointIndex, TOUCH_RADIUS, withinPressSlop, type ScreenPoint } from "../lib/gestures";
+import "../styles/map-gestures.css";
 
 export type { MapHandle } from "./handle";
 
@@ -120,6 +122,8 @@ export function createMapController(container: HTMLElement, options: MapControll
   const phone = window.matchMedia(MOBILE_QUERY).matches;
   map.addControl(new maplibregl.AttributionControl({ compact: true }), phone ? "bottom-left" : "bottom-right");
   map.touchZoomRotate.disableRotation();
+  map.keyboard.disableRotation();
+  map.getCanvas().setAttribute("aria-description", "Pan with arrow keys; zoom with plus and minus. In Follow mode, Shift plus left or right rotates, and Shift plus up or down tilts. Checkpoints are also available in the route list.");
   // MapLibre opens the compact attribution (compact-show) the first time credits
   // arrive, which covers the route on a short map. Collapse it once, after that.
   const collapseAttrib = () => {
@@ -138,6 +142,10 @@ export function createMapController(container: HTMLElement, options: MapControll
   tip.hidden = true;
   tip.setAttribute("aria-hidden", "true");
   container.append(tip);
+  const pressRing = element("div", "map-press-ring");
+  pressRing.hidden = true;
+  pressRing.setAttribute("aria-hidden", "true");
+  container.append(pressRing);
 
   let alive = true;
   let styled = false;
@@ -170,6 +178,28 @@ export function createMapController(container: HTMLElement, options: MapControll
   let chase = false;
   let chaseEntering = false;
   let chaseBearing = 0;
+  let chaseBearingOffset = 0;
+  const mapPointers = new Set<number>();
+  const documentPointers = new Set<number>();
+  let multiTouch = false;
+  if (import.meta.env.DEV) {
+    const diagnostics: MapGestureProbe = {
+      camera: () => ({ zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch(), pitching: map.touchPitch.isEnabled() }),
+      routes: () => (plan?.routes ?? []).map((route) => ({
+        id: route.id,
+        selected: route.id === selectedId,
+        points: route.geometry.coordinates.map((c) => {
+          const { x, y } = map.project(c);
+          return { x, y };
+        }),
+        checkpoints: route.checkpoints.map((c) => {
+          const { x, y } = map.project([c.lon, c.lat]);
+          return { x, y, index: c.index };
+        }),
+      })),
+    };
+    Object.assign(ensureProbe(), { mapGestures: diagnostics });
+  }
   let followPadding: maplibregl.PaddingOptions | null = null;
   let followPaddingAt = 0;
   let lastFollowAt = 0;
@@ -209,8 +239,19 @@ export function createMapController(container: HTMLElement, options: MapControll
   map.on("movestart", (event) => {
     if (!event.originalEvent) return;
     autoFramed = null;
-    // Dragging the map during playback hands the camera back to the user.
-    if (chase) setChaseState(false);
+    // Two-finger camera adjustments keep Follow active; a one-finger pan hands it back.
+    const original = event.originalEvent;
+    const twoFingers = multiTouch || ("touches" in original && original.touches.length >= 2);
+    const cameraKey = original instanceof KeyboardEvent && original.shiftKey;
+    if (chase && !twoFingers && !cameraKey) {
+      setChaseState(false);
+      map.once("moveend", () => {
+        if (alive && !chase) map.jumpTo({ pitch: 0, bearing: 0 });
+      });
+    }
+  });
+  map.on("rotate", (event) => {
+    if (chase && event.originalEvent) chaseBearingOffset = map.getBearing() - chaseBearing;
   });
 
   // The OpenFreeMap dark style references a POI sprite it does not ship; a blank pixel keeps the console clean.
@@ -558,13 +599,26 @@ export function createMapController(container: HTMLElement, options: MapControll
 
   /** Tilts in behind the truck once, then tracks it every frame with a damped heading. */
   function followTruck(): void {
-    if (!truck || !chase || chaseEntering) return;
+    if (!truck || !chase || chaseEntering || mapPointers.size || map.isMoving()) return;
     chaseBearing = easeBearing(chaseBearing, truck.bearing, truck.stopped ? 0 : 0.06);
-    map.jumpTo({ center: [truck.lon, truck.lat], bearing: chaseBearing, padding: followPadding ?? overlayPadding() });
+    map.jumpTo({ center: [truck.lon, truck.lat], bearing: chaseBearing + chaseBearingOffset, padding: followPadding ?? overlayPadding() });
+  }
+
+  function syncCameraGestures(): void {
+    if (chase) {
+      map.touchPitch.enable();
+      map.touchZoomRotate.enableRotation();
+      map.keyboard.enableRotation();
+    } else {
+      map.touchPitch.disable();
+      map.touchZoomRotate.disableRotation();
+      map.keyboard.disableRotation();
+    }
   }
 
   function setChaseState(on: boolean): void {
     chase = on;
+    syncCameraGestures();
     if (import.meta.env.DEV) ensureProbe().chase = on;
     options.onChaseChange?.(on);
   }
@@ -572,22 +626,23 @@ export function createMapController(container: HTMLElement, options: MapControll
   function enterChase(): void {
     if (!truck || !styled) return;
     setChaseState(true);
+    map.stop();
     chaseEntering = true;
     autoFramed = null;
     followPadding = overlayPadding();
     followPaddingAt = performance.now();
     chaseBearing = truck.bearing;
+    chaseBearingOffset = 0;
+    map.once("moveend", () => {
+      chaseEntering = false;
+    });
     map.easeTo({
       center: [truck.lon, truck.lat],
       zoom: Math.max(map.getZoom(), 10.2),
       pitch: 60,
       bearing: chaseBearing,
       padding: followPadding,
-      duration: 1400,
-      essential: true,
-    });
-    map.once("moveend", () => {
-      chaseEntering = false;
+      duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1400,
     });
   }
 
@@ -597,10 +652,11 @@ export function createMapController(container: HTMLElement, options: MapControll
     chaseEntering = false;
     setChaseState(false);
     if (!was || !plan || !styled) return;
-    map.easeTo({ pitch: 0, bearing: 0, duration: 700 });
+    map.stop();
     map.once("moveend", () => {
       if (alive && plan && !chase) fit(plan);
     });
+    map.easeTo({ pitch: 0, bearing: 0, duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 700 });
   }
 
   /**
@@ -1027,7 +1083,7 @@ export function createMapController(container: HTMLElement, options: MapControll
     styled = true;
     loadingStyle = false;
     map.dragRotate.disable();
-    map.touchZoomRotate.disableRotation();
+    syncCameraGestures();
     if (!map.getLayer("corridor")) restore();
     else applyFrame();
     if (!booted) {
@@ -1037,6 +1093,7 @@ export function createMapController(container: HTMLElement, options: MapControll
   });
 
   function selectRoute(event: { features?: maplibregl.MapGeoJSONFeature[] }): void {
+    if (performance.now() < suppressMapClickUntil) return;
     const routeId = event.features?.[0]?.properties?.routeId;
     if (typeof routeId === "string") options.onSelect(routeId);
   }
@@ -1065,11 +1122,155 @@ export function createMapController(container: HTMLElement, options: MapControll
   });
 
   map.on("click", "checkpoint-hit", (event) => {
+    if (performance.now() < suppressMapClickUntil) return;
     const feature = event.features?.[0];
     const routeId = feature?.properties?.routeId;
     const index = feature?.properties?.index;
     if (typeof routeId === "string" && index != null) options.onInspect(routeId, Number(index));
   });
+
+  // Pointer recognition adds inspection without replacing MapLibre's native pan/pinch handlers.
+  // Only the canvas captures pointers: overlays and the page retain their own scrolling.
+  const canvas = map.getCanvas();
+  let press: { id: number; start: ScreenPoint; routeId: string; opened: boolean } | null = null;
+  let pressTimer = 0;
+  let suppressMapClickUntil = 0;
+  let suppressInspectionMouseUntil = 0;
+
+  function canvasPoint(event: PointerEvent): ScreenPoint {
+    const box = canvas.getBoundingClientRect();
+    return { x: event.clientX - box.left, y: event.clientY - box.top };
+  }
+
+  function cancelPress(): void {
+    window.clearTimeout(pressTimer);
+    pressTimer = 0;
+    press = null;
+    pressRing.hidden = true;
+  }
+
+  function queryTouch(at: ScreenPoint, layers: string[]): maplibregl.MapGeoJSONFeature[] {
+    if (!styled || !alive) return [];
+    const available = layers.filter((id) => map.getLayer(id));
+    if (!available.length) return [];
+    return map.queryRenderedFeatures(
+      [[at.x - TOUCH_RADIUS, at.y - TOUCH_RADIUS], [at.x + TOUCH_RADIUS, at.y + TOUCH_RADIUS]],
+      { layers: available },
+    );
+  }
+
+  function lineDistance(at: ScreenPoint, feature: maplibregl.MapGeoJSONFeature): number {
+    if (feature.geometry.type !== "LineString") return Infinity;
+    return distanceToLine(at, feature.geometry.coordinates.map((c) => map.project([c[0], c[1]])));
+  }
+
+  function inspectTap(at: ScreenPoint): void {
+    // Query the visible circles, not their already padded invisible twins; the box is 44 px.
+    const checkpoints = queryTouch(at, ["checkpoints"]).filter((f) => f.properties.routeId === selectedId);
+    const nearest = nearestPointIndex(at, checkpoints.map((f) => {
+      const c = (f.geometry as GeoJSON.Point).coordinates;
+      return map.project([c[0], c[1]]);
+    }));
+    if (nearest >= 0) {
+      const props = checkpoints[nearest].properties;
+      suppressInspectionMouseUntil = performance.now() + 800;
+      options.onInspect(String(props.routeId), Number(props.index));
+      return;
+    }
+    const routes = queryTouch(at, ["routes-other", "route-selected", "route-casing"]);
+    routes.sort((a, b) => lineDistance(at, a) - lineDistance(at, b));
+    const routeId = routes[0]?.properties.routeId;
+    if (typeof routeId === "string") options.onSelect(routeId);
+  }
+
+  function onMapPointerDown(event: PointerEvent): void {
+    // A physical mouse on a hybrid device still gets its normal click, even just after a touch.
+    if (event.pointerType === "mouse") suppressMapClickUntil = 0;
+    if ((event.pointerType !== "touch" && event.pointerType !== "pen") || event.button !== 0) return;
+    mapPointers.add(event.pointerId);
+    suppressMapClickUntil = performance.now() + 800;
+    canvas.setPointerCapture(event.pointerId);
+    if (mapPointers.size > 1) multiTouch = true;
+    cancelPress();
+    if (multiTouch || !styled || !plan) return;
+    const at = canvasPoint(event);
+    press = { id: event.pointerId, start: at, routeId: selectedId, opened: false };
+    const nearSelected = queryTouch(at, ["route-selected", "route-casing"]).some((f) => f.properties.routeId === selectedId);
+    if (!nearSelected) return;
+    pressRing.style.left = `${at.x}px`;
+    pressRing.style.top = `${at.y}px`;
+    pressRing.hidden = false;
+    pressTimer = window.setTimeout(() => {
+      if (!press || press.routeId !== selectedId || mapPointers.size !== 1) return;
+      const route = plan?.routes.find((r) => r.id === selectedId);
+      if (!route) return;
+      const index = nearestPointIndex(at, route.checkpoints.map((c) => map.project([c.lon, c.lat])));
+      if (index < 0) return;
+      press.opened = true;
+      // Keep suppression until release, even if the driver holds their finger down longer.
+      suppressInspectionMouseUntil = Infinity;
+      options.onInspect(route.id, route.checkpoints[index].index);
+      hapticHint();
+    }, LONG_PRESS_MS);
+  }
+
+  function onMapPointerMove(event: PointerEvent): void {
+    if (press?.id === event.pointerId && !withinPressSlop(press.start, canvasPoint(event))) cancelPress();
+  }
+
+  function onMapPointerEnd(event: PointerEvent): void {
+    if (!mapPointers.has(event.pointerId)) return;
+    const tap = event.type === "pointerup" && press?.id === event.pointerId && !press.opened && !multiTouch;
+    // Ignore the compatibility click emitted by the browser after pointerup (including long press).
+    suppressMapClickUntil = performance.now() + 800;
+    if (suppressInspectionMouseUntil === Infinity) suppressInspectionMouseUntil = performance.now() + 800;
+    cancelPress();
+    mapPointers.delete(event.pointerId);
+    if (!mapPointers.size && !documentPointers.size) multiTouch = false;
+    if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+    if (tap) inspectTap(canvasPoint(event));
+  }
+
+  function onMapContextMenu(event: MouseEvent): void {
+    if (mapPointers.size || performance.now() < suppressMapClickUntil) event.preventDefault();
+  }
+
+  function onCompatibilityMouse(event: MouseEvent): void {
+    // A newly opened card can now be under the original finger. Suppress the compatibility
+    // mouse sequence at document capture so it cannot blur the card or activate a button.
+    const capabilities = (event as MouseEvent & { sourceCapabilities?: { firesTouchEvents: boolean } }).sourceCapabilities;
+    if (performance.now() >= suppressInspectionMouseUntil || event.detail === 0 || capabilities?.firesTouchEvents === false) return;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function onDocumentPointerDown(event: PointerEvent): void {
+    // A new intentional tap/click must work immediately, even on the card just opened.
+    // Compatibility mouse events have no new pointerdown, so they remain suppressed.
+    suppressInspectionMouseUntil = 0;
+    if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
+    documentPointers.add(event.pointerId);
+    if (documentPointers.size > 1) {
+      multiTouch = true;
+      cancelPress();
+    }
+  }
+
+  function onDocumentPointerEnd(event: PointerEvent): void {
+    documentPointers.delete(event.pointerId);
+    if (!mapPointers.size && !documentPointers.size) multiTouch = false;
+  }
+
+  canvas.addEventListener("pointerdown", onMapPointerDown);
+  canvas.addEventListener("pointermove", onMapPointerMove);
+  canvas.addEventListener("pointerup", onMapPointerEnd);
+  canvas.addEventListener("pointercancel", onMapPointerEnd);
+  canvas.addEventListener("lostpointercapture", onMapPointerEnd);
+  canvas.addEventListener("contextmenu", onMapContextMenu);
+  document.addEventListener("pointerdown", onDocumentPointerDown, true);
+  document.addEventListener("pointerup", onDocumentPointerEnd, true);
+  document.addEventListener("pointercancel", onDocumentPointerEnd, true);
+  for (const type of ["mousedown", "mouseup", "click"] as const) document.addEventListener(type, onCompatibilityMouse, true);
 
   function fillTip(props: Record<string, unknown>): void {
     const level = Number(props.level);
@@ -1110,6 +1311,11 @@ export function createMapController(container: HTMLElement, options: MapControll
   const handle: MapHandle = {
     setPlan(next) {
       if (!alive) return;
+      cancelPress();
+      if (chase) {
+        setChaseState(false);
+        map.jumpTo({ pitch: 0, bearing: 0 });
+      }
       plan = next;
       selectedId = next.recommended_route_id;
       hoverId = "";
@@ -1136,6 +1342,7 @@ export function createMapController(container: HTMLElement, options: MapControll
     },
     setSelected(routeId) {
       if (!alive) return;
+      cancelPress();
       selectedId = routeId;
       if (!styled) return;
       applySelection();
@@ -1160,6 +1367,7 @@ export function createMapController(container: HTMLElement, options: MapControll
       applyFrame();
     },
     setBasemap(nextTheme) {
+      cancelPress();
       theme = nextTheme === "dark" ? "dark" : "light";
       loadingStyle = true;
       map.setStyle(STYLES[theme]);
@@ -1215,6 +1423,20 @@ export function createMapController(container: HTMLElement, options: MapControll
     },
     destroy() {
       alive = false;
+      cancelPress();
+      mapPointers.clear();
+      documentPointers.clear();
+      canvas.removeEventListener("pointerdown", onMapPointerDown);
+      canvas.removeEventListener("pointermove", onMapPointerMove);
+      canvas.removeEventListener("pointerup", onMapPointerEnd);
+      canvas.removeEventListener("pointercancel", onMapPointerEnd);
+      canvas.removeEventListener("lostpointercapture", onMapPointerEnd);
+      canvas.removeEventListener("contextmenu", onMapContextMenu);
+      document.removeEventListener("pointerdown", onDocumentPointerDown, true);
+      document.removeEventListener("pointerup", onDocumentPointerEnd, true);
+      document.removeEventListener("pointercancel", onDocumentPointerEnd, true);
+      for (const type of ["mousedown", "mouseup", "click"] as const) document.removeEventListener(type, onCompatibilityMouse, true);
+      pressRing.remove();
       cancelAnimationFrame(fadeFrame);
       cancelAnimationFrame(layoutFrame);
       resize.disconnect();

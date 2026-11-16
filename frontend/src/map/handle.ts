@@ -10,6 +10,12 @@ export interface TruckPosition {
   stopped: boolean;
 }
 
+/** Read-only development diagnostics for real-touch E2E; no map mutation API. */
+export interface MapGestureProbe {
+  camera: () => { zoom: number; bearing: number; pitch: number; pitching: boolean };
+  routes: () => { id: string; selected: boolean; points: { x: number; y: number }[]; checkpoints: { x: number; y: number; index: number }[] }[];
+}
+
 export interface MapHandle {
   setPlan: (plan: PlanResponse) => void;
   setSelected: (routeId: string) => void;

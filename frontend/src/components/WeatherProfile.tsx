@@ -3,6 +3,8 @@ import type { RouteOption } from "../api/types";
 import { buildProfile, profileSummary, readoutAtMile, formatReadout } from "../lib/profile";
 import { riskColor } from "../lib/riskColor";
 import { nearestCheckpoint, type Timeline } from "../lib/tripTimeline";
+import { hapticHint } from "../lib/gestures";
+import "../styles/map-gestures.css";
 
 interface WeatherProfileProps {
   route: RouteOption;
@@ -26,6 +28,7 @@ export function WeatherProfile({ route, timeline, truckMile, cursorMile, onCurso
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(FALLBACK_WIDTH);
+  const scrub = useRef<{ id: number; checkpoint: number } | null>(null);
 
   useEffect(() => {
     const node = wrapRef.current;
@@ -45,6 +48,22 @@ export function WeatherProfile({ route, timeline, truckMile, cursorMile, onCurso
   function milesFromPointer(event: PointerEvent<HTMLDivElement>): number {
     const box = event.currentTarget.getBoundingClientRect();
     return model.mileAt(event.clientX - box.left);
+  }
+
+  function scrubTo(event: PointerEvent<HTMLDivElement>) {
+    const mile = milesFromPointer(event);
+    const checkpoint = nearestCheckpoint(timeline.checkpointMiles, mile);
+    if (scrub.current && event.pointerType !== "mouse") {
+      if (checkpoint >= 0 && checkpoint !== scrub.current.checkpoint) hapticHint();
+      scrub.current.checkpoint = checkpoint;
+    }
+    onCursor(mile);
+  }
+
+  function endScrub(event: PointerEvent<HTMLDivElement>) {
+    if (scrub.current?.id !== event.pointerId) return;
+    scrub.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -91,11 +110,22 @@ export function WeatherProfile({ route, timeline, truckMile, cursorMile, onCurso
       aria-valuenow={Math.round(cursorMile ?? 0)}
       aria-valuetext={valueText}
       data-testid="weather-profile"
-      onPointerMove={(event) => onCursor(milesFromPointer(event))}
-      onPointerDown={(event) => onCursor(milesFromPointer(event))}
+      onPointerMove={(event) => {
+        if (scrub.current?.id === event.pointerId || (event.pointerType === "mouse" && !scrub.current)) scrubTo(event);
+      }}
+      onPointerDown={(event) => {
+        if (!event.isPrimary || event.button !== 0 || scrub.current) return;
+        const mile = milesFromPointer(event);
+        scrub.current = { id: event.pointerId, checkpoint: nearestCheckpoint(timeline.checkpointMiles, mile) };
+        event.currentTarget.setPointerCapture(event.pointerId);
+        scrubTo(event);
+      }}
+      onPointerUp={endScrub}
+      onPointerCancel={endScrub}
+      onLostPointerCapture={endScrub}
       onPointerLeave={(event) => {
         // A finger that lifts keeps its mile; a mouse that leaves hands the map back.
-        if (event.pointerType === "mouse") onCursor(null);
+        if (event.pointerType === "mouse" && !scrub.current) onCursor(null);
       }}
       onBlur={() => onCursor(null)}
       onKeyDown={onKeyDown}
