@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { DepartureOptionsResponse } from "../api/types";
@@ -83,5 +83,51 @@ describe("DepartureStrip", () => {
     renderStrip({ status: "loading", data: null });
     expect(screen.getByRole("status")).toHaveTextContent(/Checking the next 24 hours/);
     expect(screen.queryAllByTestId("departure-bar")).toHaveLength(0);
+  });
+
+  it("scrubs the picked hour while a finger drags across the bars and keeps it on release", () => {
+    renderStrip();
+    const strip = screen.getByRole("radiogroup", { name: "Departure time, next 24 hours" });
+    strip.getBoundingClientRect = () =>
+      ({
+        x: 0,
+        y: 0,
+        left: 0,
+        top: 0,
+        right: 250,
+        bottom: 48,
+        width: 250,
+        height: 48,
+        toJSON() {
+          return {};
+        },
+      }) as DOMRect;
+    const touch = (type: "pointerDown" | "pointerMove" | "pointerUp", x: number, y: number) =>
+      fireEvent[type](strip, { clientX: x, clientY: y, pointerId: 1, pointerType: "touch", isPrimary: true, button: 0 });
+
+    touch("pointerDown", 5, 20);
+    touch("pointerMove", 35, 22);
+    expect(screen.getAllByTestId("departure-bar")[3]).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("departure-detail")).toHaveTextContent(/^\+3 h/);
+    touch("pointerUp", 35, 22);
+    expect(screen.getAllByTestId("departure-bar")[3]).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("departure-detail")).toHaveTextContent(/^\+3 h/);
+    expect(screen.getByTestId("apply-picked")).toHaveTextContent(/Plan for/);
+  });
+
+  it("keeps the planned departure when the finger moves vertically", async () => {
+    const user = userEvent.setup();
+    const { onApply } = renderStrip();
+    const strip = screen.getByRole("radiogroup", { name: "Departure time, next 24 hours" });
+    strip.getBoundingClientRect = () =>
+      ({ x: 0, y: 0, left: 0, top: 0, right: 250, bottom: 48, width: 250, height: 48, toJSON: () => ({}) }) as DOMRect;
+    fireEvent.pointerDown(strip, { clientX: 10, clientY: 10, pointerId: 1, pointerType: "touch", isPrimary: true });
+    fireEvent.pointerMove(strip, { clientX: 14, clientY: 50, pointerId: 1, pointerType: "touch" });
+    fireEvent.pointerUp(strip, { clientX: 14, clientY: 50, pointerId: 1, pointerType: "touch" });
+    expect(screen.getAllByTestId("departure-bar")[0]).toHaveAttribute("aria-checked", "true");
+    await user.click(screen.getAllByTestId("departure-bar")[4]);
+    expect(screen.getAllByTestId("departure-bar")[4]).toHaveAttribute("aria-checked", "true");
+    await user.click(screen.getByTestId("apply-picked"));
+    expect(onApply).toHaveBeenCalledWith(data.options[4].departure);
   });
 });

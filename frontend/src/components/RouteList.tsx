@@ -1,5 +1,7 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { MilesByLevel, PlanResponse, RouteOption } from "../api/types";
+import { useIsPhone } from "../hooks/useIsPhone";
+import { routeStepFromSwipe, ROUTE_SWIPE_PX, slideFeedback, useAxisClaim } from "../hooks/useSwipe";
 import { formatDuration, formatHosBreaks, formatMiles, formatShortClock } from "../lib/format";
 import { describeRecommendation } from "../lib/recommend";
 import { milesByLevelLabel, riskLabel } from "../lib/riskColor";
@@ -45,6 +47,67 @@ export function RouteList({ plan, selectedId, onSelect, onInspect, onHover, befo
   const ordered = [...plan.routes].sort((a, b) => a.rank - b.rank);
   const recommendation = describeRecommendation(plan);
   const reasons = plan.recommendation.explanation;
+  const phone = useIsPhone();
+  const orderedRef = useRef(ordered);
+  const selectedRef = useRef(selectedId);
+  const onSelectRef = useRef(onSelect);
+  const cardRef = useRef<HTMLElement | null>(null);
+  const resetTimer = useRef(0);
+  useEffect(() => {
+    orderedRef.current = ordered;
+    selectedRef.current = selectedId;
+    onSelectRef.current = onSelect;
+  });
+
+  useEffect(() => () => window.clearTimeout(resetTimer.current), []);
+
+  const releaseCard = (card: HTMLElement | null) => {
+    if (!card) return;
+    card.dataset.dragging = "settle";
+    card.style.transform = "translateX(0px)";
+    window.clearTimeout(resetTimer.current);
+    resetTimer.current = window.setTimeout(() => {
+      card.style.transform = "";
+      delete card.dataset.dragging;
+    }, 220);
+  };
+
+  const listRef = useAxisClaim<HTMLOListElement>({
+    enabled: phone,
+    claim: "x",
+    swallowAt: ROUTE_SWIPE_PX,
+    onClaim: (event) => {
+      const target = event.target;
+      cardRef.current = target instanceof Element ? target.closest<HTMLElement>("[data-testid='route-card']") : null;
+    },
+    onMove: ({ dx }) => {
+      const card = cardRef.current;
+      if (!card) return;
+      card.dataset.dragging = "true";
+      card.style.transform = `translateX(${slideFeedback(dx).toFixed(2)}px)`;
+    },
+    onEnd: ({ dx }) => {
+      const routes = orderedRef.current;
+      const index = routes.findIndex((route) => route.id === selectedRef.current);
+      const step = routeStepFromSwipe(dx);
+      const next = index + step;
+      if (step !== 0 && next >= 0 && next < routes.length) {
+        const id = routes[next].id;
+        if (id !== selectedRef.current) onSelectRef.current(id);
+      }
+      const card = cardRef.current;
+      cardRef.current = null;
+      releaseCard(card);
+    },
+    onCancel: () => {
+      const card = cardRef.current;
+      cardRef.current = null;
+      if (!card) return;
+      card.style.transform = "";
+      delete card.dataset.dragging;
+    },
+  });
+
   return (
     <section className="routes" aria-label="Route options">
       {recommendation && (
@@ -75,7 +138,7 @@ export function RouteList({ plan, selectedId, onSelect, onInspect, onHover, befo
       )}
       {beforeRoutes}
       <h2 className="section-title">Routes</h2>
-      <ol onPointerLeave={() => onHover?.(null)}>
+      <ol ref={listRef} onPointerLeave={() => onHover?.(null)}>
         {ordered.map((route) => (
           <RouteCard
             key={route.id}

@@ -1,5 +1,6 @@
-import { useId, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { DepartureOptionsResponse } from "../api/types";
+import { AXIS_LOCK_PX, indexAt, useAxisClaim } from "../hooks/useSwipe";
 import { isDepartingNow, stayLabel, stripBars, stripSummary } from "../lib/departure";
 import { forecastTicks } from "../lib/format";
 import { onRadioKeyDown } from "../lib/radio";
@@ -65,6 +66,35 @@ function ReadyStrip({
   const shown = bars[hover ?? picked] ?? bars[0];
   const pickedBar = bars[picked];
   const slots = Math.max(1, bars.length);
+  const barsRef = useRef(bars);
+  const scrubbing = useRef(false);
+  useEffect(() => {
+    barsRef.current = bars;
+  });
+  // Press-and-drag across the row. A vertical move stays a scroll (touch-action: pan-y).
+  const stripRef = useAxisClaim<HTMLDivElement>({
+    claim: "x",
+    swallowAt: AXIS_LOCK_PX,
+    onClaim: () => {
+      scrubbing.current = true;
+    },
+    onMove: ({ event }) => {
+      const node = stripRef.current;
+      if (!node) return;
+      const rect = node.getBoundingClientRect();
+      const index = indexAt(event.clientX, rect.left, rect.width, barsRef.current.length);
+      setPicked(index);
+      setHover(index);
+    },
+    onEnd: () => {
+      scrubbing.current = false;
+      setHover(null);
+    },
+    onCancel: () => {
+      scrubbing.current = false;
+      setHover(null);
+    },
+  });
 
   return (
     <>
@@ -102,12 +132,16 @@ function ReadyStrip({
       </p>
       <div className="strip-wrap">
         <div
+          ref={stripRef}
           className="strip"
           role="radiogroup"
           aria-label="Departure time, next 24 hours"
           aria-describedby={summaryId}
           style={{ "--slots": slots } as CSSProperties}
-          onPointerLeave={() => setHover(null)}
+          onPointerLeave={() => {
+            if (scrubbing.current) return;
+            setHover(null);
+          }}
         >
           {bars.map((bar, index) => {
             const suggested = suggestion?.offset_h === bar.offset;

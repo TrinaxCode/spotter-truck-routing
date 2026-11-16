@@ -1,0 +1,145 @@
+/* Touch gestures for the trip sheet, route cards, departure strip and forecast timeline.
+   The sheet drag writes only transform (will-change while the finger is down). Snap heights
+   stay in index.css and apply again on release, so the map's overlay measurement is unchanged
+   between gestures. */
+
+.sheet-handle,
+.sheet-toggle {
+  touch-action: none;
+}
+
+.timeline {
+  touch-action: pan-y;
+}
+
+/* The thumb's box is the hit target. A radial fill keeps the visible knob the same size. */
+.slider input {
+  touch-action: none;
+}
+
+.strip,
+.strip-bar {
+  touch-action: pan-y;
+}
+
+/* Coarse or any touch pointer. A fine pointer at phone width keeps the 20px thumb so a
+   resized desktop layout does not grow the track hit target.
+   `.timeline .slider` beats the unconditional `--thumb: 20px` in index.css whichever
+   stylesheet loads last. The thumb box is the hit target; the visible knob stays small. */
+@media (pointer: coarse), (any-pointer: coarse) {
+  .timeline .slider {
+    --thumb: 44px;
+  }
+  .timeline .slider input {
+    height: 44px;
+  }
+  .timeline .slider input::-webkit-slider-thumb {
+    width: 44px;
+    height: 44px;
+    margin-top: -19px;
+    background: radial-gradient(circle, #fff 0 9px, var(--accent) 9px 12px, transparent 13px);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+  }
+  .timeline .slider input::-moz-range-thumb {
+    width: 44px;
+    height: 44px;
+    background: radial-gradient(circle, #fff 0 9px, var(--accent) 9px 12px, transparent 13px);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+  }
+  .timeline .slider input:active::-webkit-slider-thumb {
+    transform: none;
+  }
+  .timeline .slider input:focus-visible::-webkit-slider-thumb {
+    box-shadow:
+      0 0 0 3px var(--accent-wash),
+      0 0 0 4px var(--accent);
+  }
+  .timeline .slider input:focus-visible::-moz-range-thumb {
+    box-shadow:
+      0 0 0 3px var(--accent-wash),
+      0 0 0 4px var(--accent);
+  }
+  .timeline .slider input:disabled::-webkit-slider-thumb,
+  .timeline .slider input:disabled::-moz-range-thumb {
+    background: var(--muted);
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .panel .panel-scroll {
+    touch-action: pan-y;
+    overscroll-behavior-y: none;
+  }
+  /* At scrollTop 0, set before the next touch. pan-down is a finger moving up (the content
+     scrolls); a finger moving down is left to the sheet. It has to be on the hit target, because
+     a child's pan-y would win. Chromium chooses the pan at touchstart, so this cannot wait for
+     pointerdown. "up" in the property name is the scroll direction, not the finger's. */
+  .panel[data-sheet-pull] .panel-scroll,
+  .panel[data-sheet-pull] .panel-scroll * {
+    touch-action: pan-down;
+  }
+  /* The weather chart keeps vertical scrolling. Its own pan-y is part of the chart gesture. */
+  .panel[data-sheet-pull] .panel-scroll .profile-chart,
+  .panel[data-sheet-pull] .panel-scroll .profile-chart * {
+    touch-action: pan-y;
+  }
+
+  .routes ol,
+  .route,
+  .route-main,
+  .checks,
+  .checks summary,
+  .checks button {
+    touch-action: pan-y;
+  }
+
+  /* While the finger is down the dock's box stays at the expanded height (one reflow).
+     The panel itself paints the surface and slides with translateY, so the map shows through
+     the gap. The forecast stays pinned on top of that slide. */
+  .dock:has(.panel[data-dragging]) {
+    background: transparent;
+    box-shadow: none;
+  }
+  .dock:has(.panel[data-dragging]) .time-wrap {
+    position: relative;
+    z-index: 3;
+    background: var(--surface-solid);
+  }
+  .panel[data-dragging] {
+    position: relative;
+    z-index: 1;
+    background: var(--surface-solid);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -12px 32px rgb(0 0 0 / 0.28);
+    user-select: none;
+  }
+  .panel[data-dragging="true"] {
+    transition: none;
+    will-change: transform;
+  }
+  .panel[data-dragging="settle"] {
+    transition: transform 0.26s var(--ease);
+    will-change: transform;
+  }
+  /* Collapsed hides the body; a drag that starts there still has to show it.
+     Do not change touch-action here: Chromium cancels the active pointer when it changes. */
+  .panel[data-dragging][data-snap] .panel-scroll {
+    display: block;
+  }
+
+  .route[data-dragging="true"] {
+    will-change: transform;
+    user-select: none;
+  }
+  .route[data-dragging="settle"] {
+    transition: transform 0.18s var(--ease);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel[data-dragging="settle"],
+  .route[data-dragging="settle"] {
+    transition: none;
+  }
+}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { HeatVariable } from "../api/types";
+import { hourDeltaFromSwipe, HOUR_SWIPE_PX, useAxisClaim } from "../hooks/useSwipe";
 import { forecastTicks, formatFrameOffset, formatFrameTime } from "../lib/format";
 import type { HeatCoverage } from "../lib/heatmap";
 import { onRadioKeyDown } from "../lib/radio";
@@ -55,6 +56,32 @@ export function HeatmapBar({
   const variableRef = useRef<HeatVariable>("risk");
   const visibleRef = useRef(true);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const frozenRef = useRef(true);
+  const originHour = useRef(0);
+  const pushRef = useRef<(nextHour: number, nextVariable: HeatVariable, nextVisible: boolean) => void>(() => undefined);
+  // Horizontal swipe on the card steps the hour. The slider keeps its own dragging; a vertical
+  // move and a second finger do not toggle anything.
+  const timelineRef = useAxisClaim<HTMLElement>({
+    claim: "x",
+    swallowAt: HOUR_SWIPE_PX,
+    allow: (event) => {
+      if (frozenRef.current) return false;
+      const target = event.target;
+      return !(target instanceof Element && target.closest(".slider"));
+    },
+    onClaim: () => {
+      originHour.current = hourRef.current;
+    },
+    onMove: ({ dx }) => {
+      if (frozenRef.current) return;
+      const delta = hourDeltaFromSwipe(dx);
+      if (delta === 0) return;
+      const next = Math.min(48, Math.max(0, originHour.current + delta));
+      if (next === hourRef.current) return;
+      setPlaying(false);
+      pushRef.current(next, variableRef.current, visibleRef.current);
+    },
+  });
 
   // Adopt the truck's hour while it drives (state adjusted during render, as TripSheet does).
   if (followHour !== seenFollow) {
@@ -131,6 +158,10 @@ export function HeatmapBar({
     : error || "The forecast did not load.";
   const ready = status === "ready" && !!startIso && !empty;
   const frozen = !ready || locked;
+  useEffect(() => {
+    frozenRef.current = frozen;
+    pushRef.current = push;
+  });
   const time = startIso ? formatFrameTime(startIso, hour) : "";
   const offset = formatFrameOffset(hour, startIso, departureIso);
   const label = `${time}, ${offset}`;
@@ -140,7 +171,13 @@ export function HeatmapBar({
   return (
     <div ref={wrapRef} className="time-wrap" data-map-overlay="" data-overlay-edge="bottom">
       <Legend variable={variable} visible={visible} />
-      <section className="timeline" aria-label="Corridor forecast" aria-busy={status === "loading"} data-state={shown}>
+      <section
+        ref={timelineRef}
+        className="timeline"
+        aria-label="Corridor forecast"
+        aria-busy={status === "loading"}
+        data-state={shown}
+      >
         <button
           type="button"
           className="play"
