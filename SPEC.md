@@ -147,7 +147,7 @@ Plans are stored in the Django cache (file-based or DB cache so gunicorn workers
 
 ## 8. Caching & resilience
 
-- Weather cache key: coordinate rounded to 0.1° (≈ model grid resolution) + UTC date window; TTL 30 min. Deduplicate checkpoints across routes before calling Open-Meteo; batch ≤ 100 locations per request; retry once on 429/5xx with backoff; timeouts 10 s.
+- Weather cache key: coordinate rounded to 0.1° (≈ model grid resolution) + UTC date window; TTL 30 min. Deduplicate checkpoints across routes before calling Open-Meteo; batches of ≤ 25 locations fetched in parallel (large responses stall from cloud hosts); retry once on 429/5xx with backoff; timeouts 10 s (routing 45 s, weather 25 s).
 - Routing results cached by (origin, destination, departure hour, load) for 15 min.
 - Geocode cached 24 h. All upstream calls have timeouts and raise typed errors mapped to 502.
 

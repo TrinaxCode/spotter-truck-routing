@@ -37,7 +37,10 @@ def get_json(url: str, params: dict, timeout: float = 10):
                 time.sleep(.25)
                 continue
             response.raise_for_status()
-            return response.json()
+            payload = response.json()
+            logger.info("%s answered %s in %.1fs (%d kB)", host, response.status_code,
+                        time.monotonic() - started, len(response.content) // 1024)
+            return payload
         except (requests.RequestException, ValueError) as error:
             status = getattr(getattr(error, "response", None), "status_code", None)
             logger.warning("%s failed after %.1fs: %s%s", host, time.monotonic() - started,

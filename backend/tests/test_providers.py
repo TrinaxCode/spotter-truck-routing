@@ -151,21 +151,24 @@ def test_weather_retries_once_and_handles_partial_provider_failure(no_network, f
     assert len(no_network.calls) == 2
 
 
-def test_weather_batches_at_most_100_and_keeps_successful_batches(no_network, fixture_json):
+def test_weather_batches_are_small_and_keep_successful_batches(no_network, fixture_json):
+    from planner.services.weather import BATCH_SIZE
+
     payload = fixture_json("open_meteo_multi.json")[0]
 
     def callback(request):
         query = parse_qs(urlsplit(request.url).query)
         count = len(query["latitude"][0].split(","))
-        assert count <= 100
+        assert count <= BATCH_SIZE
         if count == 1:
             return 503, {}, '{}'
         return 200, {}, json.dumps([payload] * count)
 
     no_network.add_callback(responses.GET, WEATHER, callback)
-    forecasts = fetch_forecasts([(-100 + i / 10, 30) for i in range(101)])
-    assert sum(bool(f) for f in forecasts.values()) == 100
-    assert len(no_network.calls) == 3
+    # Four full batches plus a one-location batch whose provider call fails (503, then retry).
+    forecasts = fetch_forecasts([(-100 + i / 10, 30) for i in range(4 * BATCH_SIZE + 1)])
+    assert sum(bool(f) for f in forecasts.values()) == 4 * BATCH_SIZE
+    assert len(no_network.calls) == 4 + 2
 
 
 @pytest.mark.parametrize("payload", [{"hourly": {}}, [], {"error": True}])

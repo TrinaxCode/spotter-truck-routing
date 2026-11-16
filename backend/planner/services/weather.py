@@ -14,9 +14,11 @@ from .http import cache_key, get_json, utc_iso
 from .sampling import Coord
 
 logger = logging.getLogger(__name__)
-BATCH_SIZE = 100
+# From cloud hosts Open-Meteo stalls on ~2 MB responses (100 places x 17 days); 25 per call
+# keeps each response near 0.5 MB and fast, and the batches run in parallel.
+BATCH_SIZE = 25
 MAX_PARALLEL = 4
-WEATHER_TIMEOUT_S = 15
+WEATHER_TIMEOUT_S = 25
 VARIABLES = ("wind_speed_10m", "wind_gusts_10m", "rain", "showers", "snowfall",
              "temperature_2m", "weather_code")
 

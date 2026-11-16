@@ -68,7 +68,8 @@ payload so the frontend fetches it once and updates the slider without more requ
 
 The shared file cache holds plans for 6 hours, routing for 15 minutes, geocoding for
 24 hours, and weather for 30 minutes. Weather keys include coordinates rounded to
-0.1° and the UTC date window. Batches have at most 100 locations. HTTP timeouts are
+0.1° and the UTC date window. Batches have at most 25 locations and run in parallel (from cloud hosts Open-Meteo stalls on
+~2 MB responses; 25 places keep each near 0.5 MB). HTTP timeouts are
 10 seconds; 429/5xx get one retry after a short backoff. Failed weather batches do
 not erase successful batches or populate the cache with fabricated observations.
 
