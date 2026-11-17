@@ -103,7 +103,7 @@ test.describe("trip playback", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await planTrip(page);
     await page.getByTestId("trip-profile").scrollIntoViewIfNeeded();
-    await page.getByRole("radio", { name: /4x speed/ }).click();
+    await page.getByRole("radio", { name: /30x speed/ }).click();
 
     const slider = page.getByTestId("heatmap-slider");
     const before = await probe(page);
@@ -138,7 +138,7 @@ test.describe("trip playback", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await planTrip(page);
     await page.getByTestId("trip-profile").scrollIntoViewIfNeeded();
-    await page.getByRole("radio", { name: /4x speed/ }).click();
+    await page.getByRole("radio", { name: /30x speed/ }).click();
     await page.getByTestId("trip-play").click();
     await expect(page.getByTestId("stop-badge")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("stop-badge")).toHaveText(/30-min break|10-h rest/);

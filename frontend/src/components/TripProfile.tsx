@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RouteOption } from "../api/types";
-import { SPEEDS, useTripPlayback, type Speed } from "../hooks/useTripPlayback";
+import { SPEEDS, TRIP_MINUTES_PER_SECOND, useTripPlayback, type Speed } from "../hooks/useTripPlayback";
 import { useReducedMotion } from "../hooks/useReducedMotion";
 import { formatReadout, readoutAtMile } from "../lib/profile";
 import { buildTimeline, nearestCheckpoint, type TripSample } from "../lib/tripTimeline";
@@ -113,6 +113,8 @@ export function TripProfile({
         onStop={playback.stop}
         onSpeed={playback.setSpeed}
         onFollow={onFollow}
+        onSeek={playback.seek}
+        onSkip={playback.skip}
       />
       <h2 className="section-title">Along {route.label}</h2>
       <div className="trip-card">
@@ -151,7 +153,7 @@ export function TripProfile({
                     role="radio"
                     aria-checked={playback.speed === value}
                     tabIndex={playback.speed === value ? 0 : -1}
-                    aria-label={`${value}x speed, ${value} trip ${value === 1 ? "hour" : "hours"} per second`}
+                    aria-label={`${value}x speed, ${value * TRIP_MINUTES_PER_SECOND} trip minutes per second`}
                     onClick={() => playback.setSpeed(value)}
                     onKeyDown={(event) =>
                       onRadioKeyDown(event, index, SPEEDS.length, (next) => playback.setSpeed(SPEEDS[next] as Speed))

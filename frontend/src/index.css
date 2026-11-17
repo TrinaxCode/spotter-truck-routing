@@ -2496,8 +2496,13 @@ h2 {
 }
 
 @media (max-width: 1023px) {
-  .hud-stat:nth-of-type(n + 3) {
+  .hud-stat:nth-of-type(n + 3),
+  .hud-skip {
+    /* Narrow HUDs keep every control reachable; the scrubber covers rewinding and skipping. */
     display: none;
+  }
+  .hud-foot {
+    flex-wrap: wrap;
   }
 }
 @media (max-width: 767px) {
@@ -2905,4 +2910,32 @@ kbd {
 .mast-actions .icon-btn {
   width: 36px;
   height: 36px;
+}
+
+/* Drive HUD scrubber: an invisible native range over the risk bar, so dragging rewinds the trip
+   with full keyboard and screen-reader support; the dot shows where the truck is. */
+.hud-progress {
+  height: 24px;
+}
+.hud-bar {
+  inset: 9px 0;
+}
+.hud-truck {
+  top: 5px;
+  pointer-events: none;
+}
+.hud-scrub {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+.hud-progress:has(.hud-scrub:focus-visible) .hud-truck {
+  box-shadow:
+    0 0 0 3px var(--accent),
+    0 0 0 6px var(--ink);
 }

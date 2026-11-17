@@ -26,6 +26,8 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // App integration tests render real backend payloads; under a parallel run they can pass 5 s.
+    testTimeout: 15_000,
     setupFiles: "./src/test/setup.ts",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
   },

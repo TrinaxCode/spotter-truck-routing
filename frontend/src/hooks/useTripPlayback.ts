@@ -3,10 +3,19 @@ import { frameHour, sampleTimeline, type Timeline, type TripSample } from "../li
 
 export type PlaybackStatus = "idle" | "playing" | "paused" | "finished";
 
-/** Trip hours that pass per real second at 1x (SPEC §12.3). */
-export const TRIP_HOURS_PER_SECOND = 1;
-export const SPEEDS = [1, 2, 4] as const;
+/**
+ * Trip minutes that pass per real second at 1x (SPEC §12.3). Slow enough that the truck moves a
+ * few miles a second, which the chase camera can follow; 30x scans a coast-to-coast trip.
+ */
+export const TRIP_MINUTES_PER_SECOND = 5;
+export const SPEEDS = [1, 3, 10, 30] as const;
 export type Speed = (typeof SPEEDS)[number];
+export const DEFAULT_SPEED: Speed = 3;
+/**
+ * Every HOS stop plays for this long on screen, whatever its length and the speed: a 30-minute
+ * break stays readable at 30x and a 10-hour rest does not mean a minute of a parked truck.
+ */
+export const STOP_SHOW_MS = 1500;
 
 /** A tab that was in the background must not make the truck leap: cap one step at 100 ms. */
 const MAX_STEP_MS = 100;
@@ -40,6 +49,10 @@ export interface TripPlayback {
   stop: () => void;
   /** Reduced motion: jump to the previous (-1) or next (1) checkpoint. */
   step: (direction: -1 | 1) => void;
+  /** Places the truck at a trip instant (ms since epoch), clamped to the trip. */
+  seek: (tMs: number) => void;
+  /** Moves the truck by trip minutes (negative rewinds). */
+  skip: (minutes: number) => void;
 }
 
 /**
@@ -52,14 +65,14 @@ export interface TripPlayback {
 export function useTripPlayback(options: Options): TripPlayback {
   const { timeline, reduceMotion } = options;
   const [status, setStatus] = useState<PlaybackStatus>("idle");
-  const [speed, setSpeedState] = useState<Speed>(1);
+  const [speed, setSpeedState] = useState<Speed>(DEFAULT_SPEED);
   const [sample, setSample] = useState<TripSample | null>(null);
   const [stepIndex, setStepIndex] = useState(-1);
 
   const callbacks = useRef(options);
   const timelineRef = useRef(timeline);
   const statusRef = useRef<PlaybackStatus>("idle");
-  const speedRef = useRef<Speed>(1);
+  const speedRef = useRef<Speed>(DEFAULT_SPEED);
   const tRef = useRef(timeline.startMs);
   const frameRef = useRef(0);
   const lastRef = useRef(0);
@@ -110,7 +123,11 @@ export function useTripPlayback(options: Options): TripPlayback {
       const line = timelineRef.current;
       const elapsed = Math.min(now - lastRef.current, MAX_STEP_MS);
       lastRef.current = now;
-      tRef.current += elapsed * speedRef.current * TRIP_HOURS_PER_SECOND * 3600;
+      const stop = sampleTimeline(line, tRef.current).stop;
+      const rate = stop
+        ? (stop.endMs - stop.startMs) / STOP_SHOW_MS
+        : speedRef.current * TRIP_MINUTES_PER_SECOND * 60;
+      tRef.current += elapsed * rate;
       if (tRef.current >= line.endMs) {
         tRef.current = line.endMs;
         publish(true, now);
@@ -175,6 +192,22 @@ export function useTripPlayback(options: Options): TripPlayback {
     [cancel, changeStatus, publish],
   );
 
+  /** Moves the truck to any trip instant (scrubbing, ±1 h); keeps playing if it was playing. */
+  const seek = useCallback(
+    (tMs: number) => {
+      const line = timelineRef.current;
+      tRef.current = Math.min(line.endMs, Math.max(line.startMs, tMs));
+      lastRef.current = performance.now();
+      if (statusRef.current === "idle" || (statusRef.current === "finished" && tRef.current < line.endMs)) {
+        changeStatus("paused");
+      }
+      publish(true, lastRef.current);
+    },
+    [changeStatus, publish],
+  );
+
+  const skip = useCallback((minutes: number) => seek(tRef.current + minutes * 60_000), [seek]);
+
   const setSpeed = useCallback((next: Speed) => {
     speedRef.current = next;
     setSpeedState(next);
@@ -199,5 +232,5 @@ export function useTripPlayback(options: Options): TripPlayback {
     };
   }, []);
 
-  return { status, speed, setSpeed, sample, stepIndex, play, pause, stop, step };
+  return { status, speed, setSpeed, sample, stepIndex, play, pause, stop, step, seek, skip };
 }

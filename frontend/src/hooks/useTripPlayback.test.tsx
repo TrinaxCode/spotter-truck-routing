@@ -91,15 +91,16 @@ function setup(reduceMotion = false) {
 }
 
 describe("useTripPlayback", () => {
-  it("moves the truck along the route at one trip hour per second and follows the forecast hour", () => {
+  it("moves the truck at five trip minutes per second at 1x and follows the forecast hour", () => {
     const { result, onTruck, onHour, onPlaying } = setup();
+    act(() => result.current.setSpeed(1));
     act(() => result.current.play());
     expect(result.current.status).toBe("playing");
     expect(onPlaying).toHaveBeenLastCalledWith(true);
     expect(onHour).toHaveBeenCalledWith(0);
 
-    act(() => advance(1000));
-    // 1 s of wall clock at 1x is one trip hour: 50 mi at 50 mph.
+    act(() => advance(12_000));
+    // 12 s of wall clock at 1x is one trip hour: 50 mi at 50 mph.
     const last = onTruck.mock.calls.at(-1)![0];
     expect(last.mile).toBeGreaterThan(45);
     expect(last.mile).toBeLessThan(55);
@@ -108,32 +109,54 @@ describe("useTripPlayback", () => {
     expect([...miles].sort((a, b) => a - b)).toEqual(miles);
   });
 
-  it("runs four times faster at 4x", () => {
+  it("starts at 3x and runs thirty times faster at 30x", () => {
     const { result, onTruck } = setup();
-    act(() => result.current.setSpeed(4));
+    expect(result.current.speed).toBe(3);
+    act(() => result.current.setSpeed(30));
     act(() => result.current.play());
-    act(() => advance(500));
-    expect(onTruck.mock.calls.at(-1)![0].mile).toBeGreaterThan(90);
+    act(() => advance(400));
+    // 0.4 s at 150 trip minutes per second is one trip hour.
+    expect(onTruck.mock.calls.at(-1)![0].mile).toBeGreaterThan(45);
+    expect(onTruck.mock.calls.at(-1)![0].mile).toBeLessThan(55);
   });
 
-  it("pauses at a break, keeps the clock and the forecast hour running, then finishes", () => {
+  it("parks at a break for a fixed 1.5 s on screen, whatever the speed, then finishes", () => {
     const { result, onTruck, onHour } = setup();
-    act(() => result.current.setSpeed(4));
+    act(() => result.current.setSpeed(30));
     act(() => result.current.play());
-    // 2.1 trip hours at 4x is 525 ms: inside the 30 min break at mile 100.
-    act(() => advance(540));
+    // At 30x (150 trip min/s) the break at trip hour 2 starts after 0.8 s.
+    act(() => advance(900));
     let sample = onTruck.mock.calls.at(-1)![0];
     expect(sample.stop?.label).toBe("30-min break");
     expect(sample.mile).toBeCloseTo(100, 3);
-    act(() => advance(48));
-    const later = onTruck.mock.calls.at(-1)![0];
-    expect(later.stop === null || later.mile >= 100).toBe(true);
+    act(() => advance(1_200));
+    expect(onTruck.mock.calls.at(-1)![0].stop?.label).toBe("30-min break");
+    act(() => advance(400));
+    sample = onTruck.mock.calls.at(-1)![0];
+    expect(sample.stop).toBeNull();
+    expect(sample.mile).toBeGreaterThan(100);
     expect(onHour.mock.calls.length).toBeGreaterThan(1);
 
-    act(() => advance(2000));
+    act(() => advance(2_000));
     sample = onTruck.mock.calls.at(-1)![0];
     expect(result.current.status).toBe("finished");
     expect(sample.mile).toBe(200);
+    expect(queue.size).toBe(0);
+  });
+
+  it("seeks and skips anywhere in the trip, backwards too, clamped to the trip", () => {
+    const { result, onTruck, onHour } = setup();
+    act(() => result.current.seek(T0 + 3.5 * HOUR));
+    expect(result.current.status).toBe("paused");
+    expect(onTruck.mock.calls.at(-1)![0].mile).toBeCloseTo(150, 0);
+    // The forecast frame follows the truck's instant (3.5 h in rounds to frame 4).
+    expect(onHour).toHaveBeenLastCalledWith(4);
+    act(() => result.current.skip(-60));
+    expect(onTruck.mock.calls.at(-1)![0].mile).toBeLessThan(150);
+    act(() => result.current.skip(-24 * 60));
+    expect(onTruck.mock.calls.at(-1)![0].mile).toBe(0);
+    act(() => result.current.seek(T0 + 99 * HOUR));
+    expect(onTruck.mock.calls.at(-1)![0].mile).toBe(200);
     expect(queue.size).toBe(0);
   });
 

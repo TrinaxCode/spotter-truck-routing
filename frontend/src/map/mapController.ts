@@ -36,6 +36,8 @@ const MOBILE_QUERY = "(max-width: 767px)";
 const FADE_MS = 450;
 /** The light basemap washes colour out less, so the same fill needs a touch less opacity. */
 const HEAT_GAIN: Record<Theme, number> = { light: 0.85, dark: 1 };
+/** Degrees the chase camera sits off the truck's heading on desktop; touch users twist it themselves. */
+const CHASE_SIDE_ANGLE = -32;
 const ACCENT: Record<Theme, string> = { light: "#1d5cf0", dark: "#5b9dff" };
 /** Dark ring under every risk colour keeps each one at >= 3:1 on both basemaps. */
 const CASING = "#0a0f1a";
@@ -236,19 +238,26 @@ export function createMapController(container: HTMLElement, options: MapControll
   });
   overlayMounts.observe(document.body, { childList: true, subtree: true });
   // A gesture hands the camera to the user; programmatic moves carry no originalEvent.
-  map.on("movestart", (event) => {
-    if (!event.originalEvent) return;
+  /** Two-finger camera adjustments keep Follow active; a one-finger pan hands the camera back. */
+  function releaseChaseFor(original: Event): void {
     autoFramed = null;
-    // Two-finger camera adjustments keep Follow active; a one-finger pan hands it back.
-    const original = event.originalEvent;
-    const twoFingers = multiTouch || ("touches" in original && original.touches.length >= 2);
+    const twoFingers = multiTouch || ("touches" in original && (original as TouchEvent).touches.length >= 2);
     const cameraKey = original instanceof KeyboardEvent && original.shiftKey;
-    if (chase && !twoFingers && !cameraKey) {
-      setChaseState(false);
-      map.once("moveend", () => {
-        if (alive && !chase) map.jumpTo({ pitch: 0, bearing: 0 });
-      });
-    }
+    if (!chase || twoFingers || cameraKey) return;
+    setChaseState(false);
+    const flatten = () => {
+      if (alive && !chase) map.jumpTo({ pitch: 0, bearing: 0 });
+    };
+    if (map.isMoving()) map.once("moveend", flatten);
+    else flatten();
+  }
+  map.on("movestart", (event) => {
+    if (event.originalEvent) releaseChaseFor(event.originalEvent);
+  });
+  // A pan that starts while a camera animation runs (e.g. a keyboard tilt) emits no new
+  // movestart; dragstart always fires when the user grabs the map.
+  map.on("dragstart", (event) => {
+    if (event.originalEvent) releaseChaseFor(event.originalEvent);
   });
   map.on("rotate", (event) => {
     if (chase && event.originalEvent) chaseBearingOffset = map.getBearing() - chaseBearing;
@@ -632,7 +641,9 @@ export function createMapController(container: HTMLElement, options: MapControll
     followPadding = overlayPadding();
     followPaddingAt = performance.now();
     chaseBearing = truck.bearing;
-    chaseBearingOffset = 0;
+    // A three-quarter view shows the cab and the trailer's side, not just the trailer roof. Touch
+    // screens start straight behind the truck: there a two-finger twist sets the angle.
+    chaseBearingOffset = window.matchMedia("(pointer: coarse)").matches ? 0 : CHASE_SIDE_ANGLE;
     map.once("moveend", () => {
       chaseEntering = false;
     });
@@ -640,7 +651,7 @@ export function createMapController(container: HTMLElement, options: MapControll
       center: [truck.lon, truck.lat],
       zoom: Math.max(map.getZoom(), 10.2),
       pitch: 60,
-      bearing: chaseBearing,
+      bearing: chaseBearing + chaseBearingOffset,
       padding: followPadding,
       duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1400,
     });

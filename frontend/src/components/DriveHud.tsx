@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useIsPhone } from "../hooks/useIsPhone";
 import type { RouteOption } from "../api/types";
-import { SPEEDS, type PlaybackStatus, type Speed } from "../hooks/useTripPlayback";
+import { SPEEDS, TRIP_MINUTES_PER_SECOND, type PlaybackStatus, type Speed } from "../hooks/useTripPlayback";
 import { lookAhead, progressGradient } from "../lib/drive";
 import {
   formatDuration,
@@ -12,7 +12,7 @@ import {
   formatTempF,
 } from "../lib/format";
 import { riskColor, riskLabel } from "../lib/riskColor";
-import type { Timeline, TripSample } from "../lib/tripTimeline";
+import { timeAtMile, type Timeline, type TripSample } from "../lib/tripTimeline";
 
 interface DriveHudProps {
   route: RouteOption;
@@ -27,6 +27,10 @@ interface DriveHudProps {
   onStop: () => void;
   onSpeed: (speed: Speed) => void;
   onFollow: (on: boolean) => void;
+  /** Moves the truck to a trip instant (scrubbing the progress bar). */
+  onSeek: (tMs: number) => void;
+  /** Moves the truck by trip minutes; negative rewinds. */
+  onSkip: (minutes: number) => void;
 }
 
 /**
@@ -59,6 +63,8 @@ function HudBody({
   onStop,
   onSpeed,
   onFollow,
+  onSeek,
+  onSkip,
 }: DriveHudProps & { inline?: boolean }) {
   if (status === "idle" || !sample) {
     const overlay = inline ? {} : { "data-map-overlay": "", "data-overlay-edge": "top" };
@@ -121,13 +127,27 @@ function HudBody({
           )}
         </div>
       </div>
-      <div className="hud-progress" aria-hidden="true">
-        <div className="hud-bar" style={{ backgroundImage: progressGradient(route, timeline) }} />
+      <div className="hud-progress">
+        <div className="hud-bar" aria-hidden="true" style={{ backgroundImage: progressGradient(route, timeline) }} />
         <div
           className="hud-truck"
+          aria-hidden="true"
           style={{
             left: `${Math.min(100, (sample.mile / Math.max(timeline.distanceMi, 1e-6)) * 100)}%`,
           }}
+        />
+        {/* Mile-based, like the risk bar under it; dragging back rewinds the trip. */}
+        <input
+          type="range"
+          className="hud-scrub"
+          data-testid="hud-scrub"
+          aria-label="Trip position"
+          aria-valuetext={`Mile ${Math.round(sample.mile)}, ${formatShortClock(new Date(sample.tMs).toISOString())}`}
+          min={0}
+          max={timeline.distanceMi}
+          step={Math.max(timeline.distanceMi / 400, 0.1)}
+          value={sample.mile}
+          onChange={(event) => onSeek(timeAtMile(timeline, Number(event.currentTarget.value)))}
         />
       </div>
       <div className="hud-foot">
@@ -139,6 +159,12 @@ function HudBody({
           {ahead.text}
         </p>
         <div className="hud-actions">
+          <button type="button" className="hud-btn hud-skip" onClick={() => onSkip(-60)} aria-label="Back one trip hour" title="Back 1 h">
+            −1h
+          </button>
+          <button type="button" className="hud-btn hud-skip" onClick={() => onSkip(60)} aria-label="Forward one trip hour" title="Forward 1 h">
+            +1h
+          </button>
           {!reduceMotion && (
             <button
               type="button"
@@ -157,6 +183,7 @@ function HudBody({
                   type="button"
                   role="radio"
                   aria-checked={speed === value}
+                    aria-label={`${value}x speed, ${value * TRIP_MINUTES_PER_SECOND} trip minutes per second`}
                   onClick={() => onSpeed(value)}
                 >
                   {value}×

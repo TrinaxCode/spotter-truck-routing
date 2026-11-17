@@ -78,7 +78,7 @@ describe("TripProfile", () => {
   it("offers Play trip with a speed choice and no Stop until a trip exists", () => {
     setup();
     expect(screen.getByRole("button", { name: "Play trip" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /1x speed/ })).toBeChecked();
+    expect(screen.getByRole("radio", { name: /^3x speed/ })).toBeChecked();
     expect(screen.queryByRole("button", { name: "Stop" })).toBeNull();
   });
 
