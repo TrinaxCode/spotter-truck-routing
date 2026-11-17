@@ -221,7 +221,7 @@ describe("App against backend payloads", () => {
       const planned = new Date(options.suggestion!.departure);
       const pad = (value: number) => String(value).padStart(2, "0");
       const local = `${planned.getFullYear()}-${pad(planned.getMonth() + 1)}-${pad(planned.getDate())}T${pad(planned.getHours())}:${pad(planned.getMinutes())}`;
-      expect(screen.getByLabelText("Departure")).toHaveValue(local);
+      expect(screen.getByTestId("departure-trigger")).toHaveAttribute("data-departure", local);
     });
   });
 });

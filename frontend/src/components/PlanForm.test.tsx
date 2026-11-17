@@ -38,6 +38,43 @@ describe("PlanForm", () => {
     await user.click(screen.getByRole("radio", { name: "10 mi" }));
     expect(screen.getByRole("radio", { name: "10 mi" })).toHaveAttribute("aria-checked", "true");
   });
+
+  it("plans tomorrow at 6 AM from the departure picker", async () => {
+    const user = userEvent.setup();
+    const onPlan = vi.fn();
+    render(<PlanForm busy={false} search={search} onPlan={onPlan} />);
+    await user.click(screen.getByRole("button", { name: /Departure/ }));
+    await user.click(screen.getByRole("radio", { name: "Tomorrow 6 AM" }));
+    await user.click(screen.getByRole("button", { name: "Plan routes" }));
+    expect(onPlan).toHaveBeenCalledWith(
+      expect.objectContaining({ departureLocal: expect.stringMatching(/T06:00$/) }),
+    );
+  });
+
+  it("follows a suggested departure and a replaced draft", () => {
+    const props = { busy: false, search, onPlan: vi.fn() };
+    const view = render(<PlanForm {...props} />);
+    view.rerender(<PlanForm {...props} departureSync={{ local: "2026-11-18T06:00", token: 1 }} />);
+    expect(screen.getByTestId("departure-trigger")).toHaveAttribute("data-departure", "2026-11-18T06:00");
+    view.rerender(
+      <PlanForm
+        {...props}
+        departureSync={{ local: "2026-11-18T06:00", token: 1 }}
+        draftSync={{
+          token: 1,
+          draft: {
+            origin: null,
+            destination: null,
+            departureLocal: "2026-11-19T08:30",
+            loadText: "10,000",
+            interval: 10,
+            hos: false,
+          },
+        }}
+      />,
+    );
+    expect(screen.getByTestId("departure-trigger")).toHaveAttribute("data-departure", "2026-11-19T08:30");
+  });
 });
 
 describe("PlaceCombobox", () => {

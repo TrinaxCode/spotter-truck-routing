@@ -4,6 +4,7 @@ import { draftIsValid, validateDraft, type FieldErrors, type TripDraft } from ".
 import { parseLoadLbs } from "../lib/format";
 import { onRadioKeyDown } from "../lib/radio";
 import { nextFullHourInput } from "../lib/time";
+import { DeparturePicker } from "./DeparturePicker";
 import { PlaceCombobox } from "./PlaceCombobox";
 
 const INTERVALS = [10, 25, 50] as const;
@@ -91,25 +92,13 @@ export function PlanForm({ busy, serverErrors, onPlan, search, departureSync, dr
         onChange={(destination) => patch({ destination }, "destination")}
       />
       </div>
-      <div className="field">
-        <label htmlFor="departure">Departure</label>
-        <input
-          id="departure"
-          type="datetime-local"
-          value={draft.departureLocal}
-          aria-invalid={show("departure") ? true : undefined}
-          aria-describedby={show("departure") ? "departure-error" : undefined}
-          onChange={(event) => patch({ departureLocal: event.target.value })}
-          onBlur={() => setTouched((current) => ({ ...current, departure: true }))}
-        />
-        {show("departure") ? (
-          <p id="departure-error" className="field-error">
-            {show("departure")}
-          </p>
-        ) : (
-          <p className="field-hint">Local time. Default is the next full hour.</p>
-        )}
-      </div>
+      <DeparturePicker
+        id="departure"
+        value={draft.departureLocal}
+        error={show("departure")}
+        onChange={(departureLocal) => patch({ departureLocal })}
+        onBlur={() => setTouched((current) => ({ ...current, departure: true }))}
+      />
       <div className="field-row">
       <div className="field">
         <label htmlFor="load">Load weight</label>
