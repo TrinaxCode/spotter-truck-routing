@@ -1,4 +1,4 @@
-"""Black-box checks for planner.services.sampling, derived ONLY from SPEC 5 and 11.
+"""Spec-level checks for planner.services.sampling (SPEC sections 5 and 11).
 
 Geometry used: straight/L-shaped polylines in (lon, lat). We almost always pass
 ``total_distance_mi`` so the mile scale is exact and independent of the haversine

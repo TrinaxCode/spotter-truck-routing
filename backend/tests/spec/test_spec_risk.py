@@ -1,4 +1,4 @@
-"""Black-box checks for planner.services.risk, derived ONLY from SPEC section 4 and 11.
+"""Spec-level checks for planner.services.risk (SPEC sections 4 and 11).
 
 Boundary convention (SPEC 4): lower bound inclusive, upper bound exclusive, except
 the "Severe" rain/snow top bound which is inclusive (> 1.00 / > 3.0 is No Travel).

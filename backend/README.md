@@ -105,7 +105,7 @@ not erase successful batches or populate the cache with fabricated observations.
 - HOS is the simplified SPEC model: 30 minutes after 8 driving hours, 10 hours after
   11; no 14-hour duty window or weekly rules. No post-destination rest is added.
 - The heatmap starts at departure hour floor; risk uses this plan's cargo load.
-  Initial cells use `clamp(bbox diagonal / 25, .15, .75)` in degrees; the 300-cell
+  Initial cells use `clamp(bbox diagonal / 25, .15, .75)` in degrees; the 450-cell
   cap takes precedence and can coarsen beyond .75°. The corridor uses 30 miles or
   1.5 latitude-side cell widths, whichever is larger. It is a forecast snapshot.
 - File caching shares workers on one machine; horizontal scaling needs a different
@@ -127,7 +127,7 @@ and actual check results.
 Tests mock HTTP with `responses`; no test calls real providers.
 `tests/test_frontend_contract.py` pins the real plan/heatmap/departure payloads the frontend tests load
 (`frontend/src/mocks/backend-*.sample.json`); after an API change run
-`WRITE_SAMPLES=1 uv run pytest -q tests/test_frontend_contract.py` and commit the samples. Tests under `tests/spec/` are a black-box suite written independently from SPEC.md.
+`WRITE_SAMPLES=1 uv run pytest -q tests/test_frontend_contract.py` and commit the samples. Tests under `tests/spec/` are spec-level tests organized by SPEC.md section.
 
 ## Railway
 

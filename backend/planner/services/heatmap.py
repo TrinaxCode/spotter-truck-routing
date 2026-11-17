@@ -52,7 +52,7 @@ def corridor_grid(routes: list[list[Coord]]) -> tuple[list[dict[str, float]], fl
                     cells.append({"lat": round(lat, 6), "lon": round(lon, 6)})
         if len(cells) <= MAX_CELLS:
             return cells, round(cell, 8)
-        # SPEC's 300-cell cap takes precedence over the initial .75-degree clamp.
+        # SPEC's 450-cell cap takes precedence over the initial .75-degree clamp.
         cell *= 1.25
 
 

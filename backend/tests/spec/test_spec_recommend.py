@@ -1,4 +1,4 @@
-"""Black-box checks for planner.services.recommend, derived ONLY from SPEC 6 and 11.
+"""Spec-level checks for planner.services.recommend (SPEC sections 6 and 11).
 
 Ranking key (ascending, lexicographic): no_travel_mi (0.1), severe_mi (0.1), high_mi (0.1),
 avg_risk (0.01), total_time_s.

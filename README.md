@@ -2,7 +2,7 @@
 
 Plan a truck trip, get three route options, and see which one is safest given the forecast **at the time the truck will actually be there**, its cargo weight, and travel time.
 
-- **Live app:** https://spotter-truck-routing-flame.vercel.app · **API:** https://backend-production-ea6c421c.up.railway.app/api/health · **Walkthrough:** pending Loom recording
+- **Live app:** https://spotter-truck-routing-flame.vercel.app · **API:** https://backend-production-ea6c421c.up.railway.app/api/health · **Walkthrough:** https://www.loom.com/share/28ca99e080584dc0852775b99865385b
 - Full spec and decisions: [`SPEC.md`](SPEC.md)
 
 ## What it does
@@ -88,7 +88,7 @@ cd backend  && uv run pytest -q && uv run ruff check .
 cd frontend && npm run typecheck && npm run lint && npm run test && npm run build && npm run e2e
 ```
 
-- **Backend:** about 525 tests with no network access. They pin every risk boundary and load rule, each ranking tie-break, checkpoint spacing, ETA interpolation, HOS, the heatmap grid and the API error shapes. `tests/spec/` is an independent black-box suite written only from `SPEC.md`.
+- **Backend:** about 525 tests with no network access. They pin every risk boundary and load rule, each ranking tie-break, checkpoint spacing, ETA interpolation, HOS, the heatmap grid and the API error shapes. `tests/spec/` contains spec-level tests organized by `SPEC.md` section.
 - **Frontend:** unit tests and a contract test against real backend payloads. Playwright E2E (45 tests) covers plan → select route → slide heatmap → checkpoint popup, drive mode, departure suggestions and touch gestures at 375, 768 and 1280 px, and asserts the slider and the playback never rebuild the map sources.
 
 ## Limitations

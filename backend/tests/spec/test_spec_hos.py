@@ -1,4 +1,4 @@
-"""Black-box checks for planner.services.hos, derived ONLY from SPEC 5 and 11.
+"""Spec-level checks for planner.services.hos (SPEC sections 5 and 11).
 
 SPEC 5: 30-min break after 8 h cumulative driving since the last break/rest;
 10-h off-duty after 11 h driving; ETA = departure + elapsed_with_breaks(drive_seconds).
