@@ -121,7 +121,7 @@ def test_full_plan_and_49_frame_heatmap(settings, no_network, fixture_json):
     payload = heat.json()
     assert payload["start"] == "2026-11-16T14:00:00Z"
     assert payload["load_lbs"] == 35000 and payload["hours"] == 49
-    assert 0 < len(payload["cells"]) <= 300
+    assert 0 < len(payload["cells"]) <= 450
     for variable in ("risk", "wind", "rain", "snow"):
         assert len(payload[variable]) == len(payload["cells"])
         assert all(len(row) == 49 for row in payload[variable])
@@ -156,8 +156,8 @@ def test_weather_outage_remains_unknown_and_warns(settings, no_network, fixture_
 ])
 def test_corridor_grid_is_capped_and_covers_route(coords):
     cells, cell_deg = corridor_grid(coords)
-    assert 0 < len(cells) <= 300
-    assert cell_deg >= .15
+    assert 0 < len(cells) <= 450
+    assert cell_deg >= .1
     assert len({(c["lon"], c["lat"]) for c in cells}) == len(cells)
     from planner.services.sampling import haversine
     for route in coords:

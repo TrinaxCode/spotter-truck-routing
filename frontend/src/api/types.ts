@@ -68,6 +68,8 @@ export interface CheckpointWeather {
   temp_f: number;
   weather_code: number;
   forecast_time: string;
+  /** Direction the wind blows from, degrees clockwise from north; null or absent when unknown. */
+  wind_dir_deg?: number | null;
 }
 
 /** Present only when the checkpoint has weather. Component levels are then known ints. */
@@ -144,6 +146,11 @@ export interface HeatmapResponse {
   wind: (number | null)[][];
   rain: (number | null)[][];
   snow: (number | null)[][];
+  /**
+   * Wind direction (from, degrees) per cell and hour; drives the wind animation only. Optional:
+   * plans cached before it existed and demo data omit it.
+   */
+  wind_dir?: (number | null)[][];
 }
 
 export type HeatVariable = "risk" | "wind" | "rain" | "snow";

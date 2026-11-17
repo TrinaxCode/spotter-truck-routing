@@ -56,6 +56,7 @@ describe("backend plan payload", () => {
         if (checkpoint.weather) {
           keysOf<CheckpointWeather>(checkpoint.weather, [
             "wind_mph", "gust_mph", "rain_in_hr", "snow_in_hr", "temp_f", "weather_code", "forecast_time",
+            "wind_dir_deg",
           ]);
         }
       }
@@ -115,12 +116,12 @@ describe("backend plan payload", () => {
 
 describe("backend heatmap payload", () => {
   it("is columnar with 49 frames per cell and nulls where weather is missing", () => {
-    keysOf<HeatmapResponse>(heat, ["plan_id", "start", "hours", "cell_deg", "load_lbs", "cells", "risk", "wind", "rain", "snow"]);
+    keysOf<HeatmapResponse>(heat, ["plan_id", "start", "hours", "cell_deg", "load_lbs", "cells", "risk", "wind", "rain", "snow", "wind_dir"]);
     expect(heat.plan_id).toBe(plan.plan_id);
     expect(heat.hours).toBe(49);
-    for (const variable of ["risk", "wind", "rain", "snow"] as const) {
+    for (const variable of ["risk", "wind", "rain", "snow", "wind_dir"] as const) {
       expect(heat[variable]).toHaveLength(heat.cells.length);
-      for (const row of heat[variable]) expect(row).toHaveLength(49);
+      for (const row of heat[variable] ?? []) expect(row).toHaveLength(49);
     }
     expect(heat.risk.flat()).toContain(null);
     expect(heat.risk.flat().some((value) => value !== null && value >= 3)).toBe(true);

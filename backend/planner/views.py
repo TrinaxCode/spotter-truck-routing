@@ -1,3 +1,4 @@
+import time
 from ipaddress import ip_address, ip_network
 
 from rest_framework.decorators import api_view, throttle_classes
@@ -18,6 +19,11 @@ from .services.planner import create_plan
 
 class ClientThrottle(AnonRateThrottle):
     """Per-client limit; IPv6 clients are keyed by /64, the block one subscriber usually holds."""
+
+    def timer(self) -> float:
+        # DRF stores `timer = time.time` as a class attribute; tools that patch time.time (such
+        # as freezegun in the tests) would turn it into a bound method and break the call.
+        return time.time()
 
     def get_ident(self, request):
         ident = super().get_ident(request)

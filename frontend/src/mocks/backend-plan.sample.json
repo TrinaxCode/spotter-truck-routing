@@ -86,7 +86,8 @@
       "snow_in_hr": 0,
       "temp_f": 51.0,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T14:00:00Z"
+      "forecast_time": "2026-11-16T14:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 0,
@@ -110,7 +111,8 @@
       "snow_in_hr": 0,
       "temp_f": 50.1,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T15:00:00Z"
+      "forecast_time": "2026-11-16T15:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 1,
@@ -136,7 +138,8 @@
       "snow_in_hr": 0,
       "temp_f": 49.1,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T16:00:00Z"
+      "forecast_time": "2026-11-16T16:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 3,
@@ -162,7 +165,8 @@
       "snow_in_hr": 0,
       "temp_f": 48.4,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T17:00:00Z"
+      "forecast_time": "2026-11-16T17:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 4,
@@ -188,7 +192,8 @@
       "snow_in_hr": 0,
       "temp_f": 47.4,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T18:00:00Z"
+      "forecast_time": "2026-11-16T18:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 4,
@@ -215,7 +220,8 @@
       "snow_in_hr": 0,
       "temp_f": 46.3,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T19:00:00Z"
+      "forecast_time": "2026-11-16T19:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 4,
@@ -242,7 +248,8 @@
       "snow_in_hr": 0,
       "temp_f": 45.4,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T19:00:00Z"
+      "forecast_time": "2026-11-16T19:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 3,
@@ -269,7 +276,8 @@
       "snow_in_hr": 0,
       "temp_f": 44.4,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T20:00:00Z"
+      "forecast_time": "2026-11-16T20:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 1,
@@ -296,7 +304,8 @@
       "snow_in_hr": 0,
       "temp_f": 43.7,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T21:00:00Z"
+      "forecast_time": "2026-11-16T21:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 0,
@@ -320,7 +329,8 @@
       "snow_in_hr": 0.76,
       "temp_f": 42.5,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T22:00:00Z"
+      "forecast_time": "2026-11-16T22:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 0,
@@ -346,7 +356,8 @@
       "snow_in_hr": 0.6,
       "temp_f": 41.4,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T23:00:00Z"
+      "forecast_time": "2026-11-16T23:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 0,
@@ -372,7 +383,8 @@
       "snow_in_hr": 0.76,
       "temp_f": 40.6,
       "weather_code": 3,
-      "forecast_time": "2026-11-17T00:00:00Z"
+      "forecast_time": "2026-11-17T00:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 3,
@@ -399,7 +411,8 @@
       "snow_in_hr": 0.28,
       "temp_f": 39.5,
       "weather_code": 3,
-      "forecast_time": "2026-11-17T01:00:00Z"
+      "forecast_time": "2026-11-17T01:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 4,
@@ -425,7 +438,8 @@
       "snow_in_hr": 0.6,
       "temp_f": 38.6,
       "weather_code": 3,
-      "forecast_time": "2026-11-17T01:00:00Z"
+      "forecast_time": "2026-11-17T01:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 4,
@@ -453,7 +467,8 @@
       "snow_in_hr": 0.44,
       "temp_f": 38.4,
       "weather_code": 3,
-      "forecast_time": "2026-11-17T02:00:00Z"
+      "forecast_time": "2026-11-17T02:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 4,
@@ -692,7 +707,8 @@
       "snow_in_hr": 0,
       "temp_f": 51.0,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T14:00:00Z"
+      "forecast_time": "2026-11-16T14:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 0,
@@ -716,7 +732,8 @@
       "snow_in_hr": 0,
       "temp_f": 50.2,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T15:00:00Z"
+      "forecast_time": "2026-11-16T15:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 1,
@@ -742,7 +759,8 @@
       "snow_in_hr": 0,
       "temp_f": 49.2,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T16:00:00Z"
+      "forecast_time": "2026-11-16T16:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 3,
@@ -768,7 +786,8 @@
       "snow_in_hr": 0,
       "temp_f": 48.5,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T17:00:00Z"
+      "forecast_time": "2026-11-16T17:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 4,
@@ -794,7 +813,8 @@
       "snow_in_hr": 0,
       "temp_f": 47.5,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T18:00:00Z"
+      "forecast_time": "2026-11-16T18:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 4,
@@ -821,7 +841,8 @@
       "snow_in_hr": 0,
       "temp_f": 46.6,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T18:00:00Z"
+      "forecast_time": "2026-11-16T18:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 3,
@@ -848,7 +869,8 @@
       "snow_in_hr": 0,
       "temp_f": 45.6,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T19:00:00Z"
+      "forecast_time": "2026-11-16T19:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 1,
@@ -875,7 +897,8 @@
       "snow_in_hr": 0,
       "temp_f": 44.9,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T20:00:00Z"
+      "forecast_time": "2026-11-16T20:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 0,
@@ -901,7 +924,8 @@
       "snow_in_hr": 0,
       "temp_f": 43.9,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T21:00:00Z"
+      "forecast_time": "2026-11-16T21:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 0,
@@ -925,7 +949,8 @@
       "snow_in_hr": 2.67,
       "temp_f": 43.0,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T21:00:00Z"
+      "forecast_time": "2026-11-16T21:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 0,
@@ -951,7 +976,8 @@
       "snow_in_hr": 2.58,
       "temp_f": 42.0,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T22:00:00Z"
+      "forecast_time": "2026-11-16T22:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 1,
@@ -978,7 +1004,8 @@
       "snow_in_hr": 2.27,
       "temp_f": 41.0,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T23:00:00Z"
+      "forecast_time": "2026-11-16T23:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 3,
@@ -1005,7 +1032,8 @@
       "snow_in_hr": 1.64,
       "temp_f": 39.9,
       "weather_code": 3,
-      "forecast_time": "2026-11-17T00:00:00Z"
+      "forecast_time": "2026-11-17T00:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 4,
@@ -1032,7 +1060,8 @@
       "snow_in_hr": 0.91,
       "temp_f": 39.0,
       "weather_code": 3,
-      "forecast_time": "2026-11-17T01:00:00Z"
+      "forecast_time": "2026-11-17T01:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 4,
@@ -1060,7 +1089,8 @@
       "snow_in_hr": 0.91,
       "temp_f": 38.4,
       "weather_code": 3,
-      "forecast_time": "2026-11-17T01:00:00Z"
+      "forecast_time": "2026-11-17T01:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 4,
@@ -1306,7 +1336,8 @@
       "snow_in_hr": 0,
       "temp_f": 51.0,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T14:00:00Z"
+      "forecast_time": "2026-11-16T14:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 0,
@@ -1330,7 +1361,8 @@
       "snow_in_hr": 0,
       "temp_f": 49.9,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T15:00:00Z"
+      "forecast_time": "2026-11-16T15:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 0,
@@ -1354,7 +1386,8 @@
       "snow_in_hr": 0,
       "temp_f": 48.8,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T16:00:00Z"
+      "forecast_time": "2026-11-16T16:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 1,
@@ -1380,7 +1413,8 @@
       "snow_in_hr": 0,
       "temp_f": 47.7,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T17:00:00Z"
+      "forecast_time": "2026-11-16T17:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 3,
@@ -1407,7 +1441,8 @@
       "snow_in_hr": 0,
       "temp_f": 46.9,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T18:00:00Z"
+      "forecast_time": "2026-11-16T18:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 4,
@@ -1434,7 +1469,8 @@
       "snow_in_hr": 0,
       "temp_f": 46.0,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T19:00:00Z"
+      "forecast_time": "2026-11-16T19:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 4,
@@ -1461,7 +1497,8 @@
       "snow_in_hr": 0,
       "temp_f": 45.0,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T20:00:00Z"
+      "forecast_time": "2026-11-16T20:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 3,
@@ -1488,7 +1525,8 @@
       "snow_in_hr": 0,
       "temp_f": 44.1,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T21:00:00Z"
+      "forecast_time": "2026-11-16T21:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 3,
@@ -1514,7 +1552,8 @@
       "snow_in_hr": 0,
       "temp_f": 43.1,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T21:00:00Z"
+      "forecast_time": "2026-11-16T21:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 1,
@@ -1540,7 +1579,8 @@
       "snow_in_hr": 0,
       "temp_f": 42.2,
       "weather_code": 3,
-      "forecast_time": "2026-11-16T22:00:00Z"
+      "forecast_time": "2026-11-16T22:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 0,
@@ -1564,7 +1604,8 @@
       "snow_in_hr": 0,
       "temp_f": 41.2,
       "weather_code": 3,
-      "forecast_time": "2026-11-17T00:00:00Z"
+      "forecast_time": "2026-11-17T00:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 0,
@@ -1588,7 +1629,8 @@
       "snow_in_hr": 0,
       "temp_f": 40.3,
       "weather_code": 3,
-      "forecast_time": "2026-11-17T00:00:00Z"
+      "forecast_time": "2026-11-17T00:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 1,
@@ -1614,7 +1656,8 @@
       "snow_in_hr": 0,
       "temp_f": 39.3,
       "weather_code": 3,
-      "forecast_time": "2026-11-17T01:00:00Z"
+      "forecast_time": "2026-11-17T01:00:00Z",
+      "wind_dir_deg": null
      },
      "levels": {
       "wind": 3,

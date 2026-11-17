@@ -9,6 +9,12 @@ from .risk import assess
 from .sampling import Coord, distance_to_polyline, simplify
 from .weather import fetch_forecasts, rounded_coord, select_weather
 
+# Finer than the forecast model's ~0.1° grid would add nothing; 450 cells keep one heatmap well
+# inside Open-Meteo's free per-minute budget (each location counts as a call).
+MIN_CELL_DEG = .1
+MAX_CELL_DEG = .6
+MAX_CELLS = 450
+
 
 def corridor_grid(routes: list[list[Coord]]) -> tuple[list[dict[str, float]], float]:
     if not routes or not all(len(route) >= 2 for route in routes):
@@ -16,7 +22,7 @@ def corridor_grid(routes: list[list[Coord]]) -> tuple[list[dict[str, float]], fl
     points = [point for route in routes for point in route]
     min_lon, max_lon = min(p[0] for p in points), max(p[0] for p in points)
     min_lat, max_lat = min(p[1] for p in points), max(p[1] for p in points)
-    cell = max(.15, min(.75, hypot(max_lon - min_lon, max_lat - min_lat) / 25))
+    cell = max(MIN_CELL_DEG, min(MAX_CELL_DEG, hypot(max_lon - min_lon, max_lat - min_lat) / 40))
     # Much smaller than the minimum cell size, but reduces long provider polylines.
     lines = [simplify(route, .002) for route in routes]
     scale = max(.01, cos(radians(max(abs(min_lat), abs(max_lat)))))
@@ -44,7 +50,7 @@ def corridor_grid(routes: list[list[Coord]]) -> tuple[list[dict[str, float]], fl
                     distance_to_polyline((lon, lat), route) <= radius for route in lines
                 ):
                     cells.append({"lat": round(lat, 6), "lon": round(lon, 6)})
-        if len(cells) <= 300:
+        if len(cells) <= MAX_CELLS:
             return cells, round(cell, 8)
         # SPEC's 300-cell cap takes precedence over the initial .75-degree clamp.
         cell *= 1.25
@@ -64,18 +70,19 @@ def get_heatmap(plan_id: str) -> dict:
         minute=0, second=0, microsecond=0)
     result = {"plan_id": plan_id, "start": utc_iso(start), "hours": 49,
               "cell_deg": cell_deg, "load_lbs": plan["request"]["load_lbs"], "cells": cells,
-              "risk": [], "wind": [], "rain": [], "snow": []}
+              "risk": [], "wind": [], "rain": [], "snow": [], "wind_dir": []}
     for cell in cells:
-        row = {variable: [] for variable in ("risk", "wind", "rain", "snow")}
+        row = {variable: [] for variable in ("risk", "wind", "rain", "snow", "wind_dir")}
         forecast = forecasts[rounded_coord((cell["lon"], cell["lat"]))]
         for hour in range(49):
             weather = select_weather(forecast, start + timedelta(hours=hour))
-            values = (None, None, None, None)
+            values = (None, None, None, None, None)
             if weather is not None:
                 assessment = assess(weather.wind_mph, weather.rain_in_hr, weather.snow_in_hr,
                                     result["load_lbs"])
                 values = (int(assessment.level), round(weather.wind_mph, 2),
-                          round(weather.rain_in_hr, 2), round(weather.snow_in_hr, 2))
+                          round(weather.rain_in_hr, 2), round(weather.snow_in_hr, 2),
+                          None if weather.wind_dir_deg is None else round(weather.wind_dir_deg))
             for variable, value in zip(row, values, strict=True):
                 row[variable].append(value)
         for variable in row:

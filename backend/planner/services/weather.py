@@ -21,6 +21,9 @@ MAX_PARALLEL = 4
 WEATHER_TIMEOUT_S = 25
 VARIABLES = ("wind_speed_10m", "wind_gusts_10m", "rain", "showers", "snowfall",
              "temperature_2m", "weather_code")
+# Requested too, but optional: direction only drives the map animation, never a risk rule.
+DIRECTION = "wind_direction_10m"
+REQUESTED = (*VARIABLES, DIRECTION)
 
 
 @dataclass(frozen=True)
@@ -32,6 +35,9 @@ class Weather:
     temp_f: float
     weather_code: int
     forecast_time: str
+    # Meteorological convention: the direction the wind blows FROM, degrees clockwise from north.
+    # None when the provider sent no direction; it never affects risk.
+    wind_dir_deg: float | None = None
 
 
 def rounded_coord(coord: Coord) -> Coord:
@@ -47,6 +53,9 @@ def parse_forecast(payload: dict) -> dict:
         raise ValueError("Non-hourly data")
     if any(not isinstance(hourly[v], list) or len(hourly[v]) != len(times) for v in VARIABLES):
         raise ValueError("Mismatched arrays")
+    direction = hourly.get(DIRECTION)
+    if not isinstance(direction, list) or len(direction) != len(times):
+        hourly = {**hourly, DIRECTION: [None] * len(times)}
     return {"hourly": hourly}
 
 
@@ -65,7 +74,7 @@ def fetch_forecasts(coords: list[Coord]) -> dict[Coord, dict | None]:
         params = {
             "latitude": ",".join(f"{c[1]:g}" for c in batch),
             "longitude": ",".join(f"{c[0]:g}" for c in batch),
-            "hourly": ",".join(VARIABLES), "wind_speed_unit": "mph",
+            "hourly": ",".join(REQUESTED), "wind_speed_unit": "mph",
             "precipitation_unit": "inch", "temperature_unit": "fahrenheit",
             "timezone": "GMT", "timeformat": "unixtime", "forecast_days": 16, "past_days": 1,
         }
@@ -110,10 +119,13 @@ def select_weather(forecast: dict | None, eta: datetime) -> Weather | None:
         if any(v is None or not isinstance(v, (int, float)) or not isfinite(v) for v in values):
             return None
         wind, gust, rain, showers, snow, temp, code = values
+        raw_direction = hourly[DIRECTION][w] if DIRECTION in hourly else None
+        direction = (raw_direction % 360 if isinstance(raw_direction, (int, float))
+                     and isfinite(raw_direction) else None)
         if (any(v < 0 for v in (wind, gust, rain, showers, snow, code))
                 or not isfinite(rain + showers)):
             return None
         return Weather(wind, gust, rain + showers, snow, temp, int(code),
-                       utc_iso(datetime.fromtimestamp(precipitation_hour, UTC)))
+                       utc_iso(datetime.fromtimestamp(precipitation_hour, UTC)), direction)
     except (ValueError, IndexError):
         return None
