@@ -1,16 +1,18 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import type { HeatVariable } from "../api/types";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import type { HeatmapResponse, HeatVariable } from "../api/types";
+import { corridorStats } from "../lib/corridorStats";
+import { RISK_COLORS } from "../lib/riskColor";
 import { hourDeltaFromSwipe, HOUR_SWIPE_PX, useAxisClaim } from "../hooks/useSwipe";
 import { forecastTicks, formatFrameOffset, formatFrameTime } from "../lib/format";
 import type { HeatCoverage } from "../lib/heatmap";
 import { onRadioKeyDown } from "../lib/radio";
 import { Legend } from "./States";
 
-const VARIABLES: { id: HeatVariable; label: string }[] = [
-  { id: "risk", label: "Risk" },
-  { id: "wind", label: "Wind" },
-  { id: "rain", label: "Rain" },
-  { id: "snow", label: "Snow" },
+const VARIABLES: { id: HeatVariable; label: string; icon: ReactNode }[] = [
+  { id: "risk", label: "Risk", icon: <RiskGlyph /> },
+  { id: "wind", label: "Wind", icon: <WindGlyph /> },
+  { id: "rain", label: "Rain", icon: <RainGlyph /> },
+  { id: "snow", label: "Snow", icon: <SnowGlyph /> },
 ];
 
 interface HeatmapBarProps {
@@ -31,6 +33,8 @@ interface HeatmapBarProps {
   followHour?: number | null;
   /** The truck is moving: the slider and play button wait instead of fighting it. */
   locked?: boolean;
+  /** Corridor data, for the "what the corridor looks like this hour" summary. */
+  heat?: HeatmapResponse | null;
 }
 
 export function HeatmapBar({
@@ -43,6 +47,7 @@ export function HeatmapBar({
   onFrame,
   followHour = null,
   locked = false,
+  heat = null,
 }: HeatmapBarProps) {
   const [hour, setHour] = useState(0);
   const [variable, setVariable] = useState<HeatVariable>("risk");
@@ -167,6 +172,11 @@ export function HeatmapBar({
   const label = `${time}, ${offset}`;
   const ticks = startIso ? forecastTicks(startIso) : [];
   const style = { "--p": hour / 48 } as CSSProperties;
+  // Recomputed per frame over a few hundred cells; this card re-renders on each hour anyway.
+  const stats = useMemo(
+    () => (heat && status === "ready" ? corridorStats(heat, variable, Math.min(hour, heat.hours - 1)) : null),
+    [heat, status, variable, hour],
+  );
 
   return (
     <div ref={wrapRef} className="time-wrap" data-map-overlay="" data-overlay-edge="bottom">
@@ -235,7 +245,8 @@ export function HeatmapBar({
                   )
                 }
               >
-                {item.label}
+                {item.icon}
+                <span>{item.label}</span>
               </button>
             ))}
           </div>
@@ -256,6 +267,7 @@ export function HeatmapBar({
             </button>
           )}
         </div>
+        {stats && visible && shown === "ready" && <CorridorSummary stats={stats} />}
         <span className="sr-only" role="status">
           {status === "loading" && "Loading corridor forecast"}
           {shown === "error" && problem}
@@ -332,6 +344,56 @@ function PauseIcon() {
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
       <rect x="3.5" y="2.5" width="3.2" height="11" rx="1" fill="currentColor" />
       <rect x="9.3" y="2.5" width="3.2" height="11" rx="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function CorridorSummary({ stats }: { stats: ReturnType<typeof corridorStats> }) {
+  return (
+    <p className="corridor-line" data-testid="corridor-summary">
+      {stats.kind === "risk" && stats.known > 0 && (
+        <span className="corridor-mix" aria-hidden="true">
+          {stats.shares.map((share, level) =>
+            share > 0 ? (
+              <span key={level} style={{ flexGrow: share, background: RISK_COLORS[level as 0 | 1 | 2 | 3 | 4] }} />
+            ) : null,
+          )}
+        </span>
+      )}
+      <span>{stats.text}</span>
+    </p>
+  );
+}
+
+function RiskGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M8 1.6 13.6 4v4.2c0 3.1-2.3 5.4-5.6 6.2-3.3-.8-5.6-3.1-5.6-6.2V4z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M8 5.2v3.6M8 10.8v.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function WindGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M2 6h8.2a2.1 2.1 0 1 0-2-2.6M2 9.6h11a2.1 2.1 0 1 1-2 2.6M2 13h5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function RainGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M8 1.8c2.4 3 4.2 5.4 4.2 7.6a4.2 4.2 0 0 1-8.4 0C3.8 7.2 5.6 4.8 8 1.8z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SnowGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M8 1.5v13M2.4 4.8l11.2 6.4M2.4 11.2l11.2-6.4M6.2 2.6 8 4.2l1.8-1.6M6.2 13.4 8 11.8l1.8 1.6" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

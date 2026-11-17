@@ -11,6 +11,17 @@ export const TRUCK_3D_LAYER = "truck-3d";
 const MODEL_LENGTH_M = 21;
 /** On-screen length the truck keeps at every zoom; a real-size truck is invisible at route zoom. */
 const SCREEN_LENGTH_PX = 150;
+/** In the trip overview (whole route on screen) the truck is a marker, not the subject. */
+const OVERVIEW_LENGTH_PX = 44;
+const OVERVIEW_ZOOM = 6;
+const CHASE_ZOOM = 10;
+
+/** On-screen length for a zoom: small over the whole route, full size in the chase view. */
+export function screenLengthPx(zoom: number): number {
+  const t = Math.min(1, Math.max(0, (zoom - OVERVIEW_ZOOM) / (CHASE_ZOOM - OVERVIEW_ZOOM)));
+  const eased = t * t * (3 - 2 * t);
+  return OVERVIEW_LENGTH_PX + (SCREEN_LENGTH_PX - OVERVIEW_LENGTH_PX) * eased;
+}
 /** Mercator metres per CSS pixel at zoom 0 on the equator for 512 px tiles. */
 const METERS_PER_PX_Z0 = 40_075_016.686 / 512;
 const WHEEL_RADIUS_M = 0.52;
@@ -326,7 +337,7 @@ export function createTruck3D(map: maplibregl.Map, accentHex: string): Truck3D {
     render(_gl, args: CustomRenderMethodInput) {
       if (!renderer || !truck) return;
       const metersPerPx = (METERS_PER_PX_Z0 * Math.cos((truck.lat * Math.PI) / 180)) / 2 ** map.getZoom();
-      const exaggeration = Math.max(1, (SCREEN_LENGTH_PX * metersPerPx) / MODEL_LENGTH_M);
+      const exaggeration = Math.max(1, (screenLengthPx(map.getZoom()) * metersPerPx) / MODEL_LENGTH_M);
       const s = origin.meterInMercatorCoordinateUnits() * exaggeration;
       // Mercator y grows southwards; the negative y scale turns the model's +y into north.
       local.makeTranslation(origin.x, origin.y, origin.z).scale(scale.set(s, -s, s));

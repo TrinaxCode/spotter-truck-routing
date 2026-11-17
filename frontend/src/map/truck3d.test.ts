@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as THREE from "three";
 import * as maplibregl from "maplibre-gl";
 import type { CustomRenderMethodInput } from "maplibre-gl";
-import { createTruck3D, TRUCK_3D_LAYER } from "./truck3d";
+import { createTruck3D, screenLengthPx, TRUCK_3D_LAYER } from "./truck3d";
 
 const capture = vi.hoisted(() => ({
   scene: null as THREE.Scene | null,
@@ -188,5 +188,17 @@ describe("procedural Class 8 truck", () => {
       expect(mesh.geometry).toBe(resources[i][0]);
       expect(mesh.material).toBe(resources[i][1]);
     });
+  });
+});
+
+describe("screenLengthPx", () => {
+  it("keeps the truck a small marker in the overview and full size in the chase view", () => {
+    expect(screenLengthPx(4)).toBe(44);
+    expect(screenLengthPx(6)).toBe(44);
+    expect(screenLengthPx(10.2)).toBe(150);
+    const mid = screenLengthPx(8);
+    expect(mid).toBeGreaterThan(44);
+    expect(mid).toBeLessThan(150);
+    for (let z = 4; z < 12; z += 0.5) expect(screenLengthPx(z + 0.5)).toBeGreaterThanOrEqual(screenLengthPx(z));
   });
 });

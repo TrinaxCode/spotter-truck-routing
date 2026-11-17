@@ -406,6 +406,7 @@ h2 {
   grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-areas:
     "play clock tools"
+    "summary summary summary"
     "slider slider slider";
   align-items: center;
   gap: 2px 14px;
@@ -2138,6 +2139,7 @@ h2 {
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas:
       "play clock"
+      "summary summary"
       "slider slider"
       "tools tools";
     padding: 8px 14px 12px;
@@ -2938,4 +2940,63 @@ kbd {
   box-shadow:
     0 0 0 3px var(--accent),
     0 0 0 6px var(--ink);
+}
+
+/* Forecast card: variable chips carry an icon; a summary line tells what the corridor looks like
+   at the selected hour (risk mix bar, or peak/median values). */
+.tools .chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tools .chips button svg {
+  flex: none;
+  opacity: 0.85;
+}
+.tools .chips button[aria-checked="true"] svg {
+  opacity: 1;
+}
+.corridor-line {
+  grid-area: summary;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 2px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+.corridor-line > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.corridor-mix {
+  flex: none;
+  display: flex;
+  width: 64px;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px var(--bar-edge);
+}
+.corridor-mix > span {
+  min-width: 2px;
+}
+@media (max-width: 767px) {
+  /* Phones: icons carry the variable; labels stay for screen readers via the radio name. */
+  .tools .chips button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .tools .chips button {
+    min-width: var(--hit);
+    justify-content: center;
+  }
 }

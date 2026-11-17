@@ -76,6 +76,7 @@ export function App() {
   const [heatError, setHeatError] = useState("");
   const [heatStart, setHeatStart] = useState<string | null>(null);
   const [heatCoverage, setHeatCoverage] = useState<Record<HeatVariable, HeatCoverage> | null>(null);
+  const [heatData, setHeatData] = useState<HeatmapResponse | null>(null);
   const [departures, setDepartures] = useState<{
     status: DepartureStatus;
     data: DepartureOptionsResponse | null;
@@ -128,6 +129,7 @@ export function App() {
       const heat = await api.fetchHeatmap(planId, abortRef.current?.signal);
       setHeatStart(heat.start);
       setHeatCoverage(heatmapCoverage(heat));
+      setHeatData(heat);
       setHeatStatus("ready");
       queued.current.heat = heat;
       mapRef.current?.setHeatmap(heat);
@@ -508,6 +510,7 @@ export function App() {
           onFrame={onFrame}
           followHour={followHour}
           locked={tripPlaying}
+          heat={heatData}
         />
       </div>
       {inspect && (
