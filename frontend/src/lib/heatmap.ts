@@ -112,13 +112,20 @@ function interpolate(value: PaintExpr, pairs: readonly (readonly [number, unknow
   return ["interpolate", ["linear"], value, ...pairs.flat()];
 }
 
+/** A short/missing row is unknown, including the last forecast frame. */
+function hourlyValue(variable: HeatVariable, hour: number): PaintExpr {
+  // Assert the scalar, not the array: MapLibre otherwise infers array<number> from
+  // match/interpolate and rejects an entire row when any of its 49 values is null.
+  return ["case", ["<", hour, ["length", ["get", variable]]], ["number", ["coalesce", ["at", hour, ["get", variable]], -1], -1], -1];
+}
+
 /** Paint expression for one hour. The hour is a literal index into property arrays. */
 export function heatmapFillColor(variable: HeatVariable, hour: number): PaintExpr {
-  const value: PaintExpr = ["at", hour, ["get", variable]];
+  const value = hourlyValue(variable, hour);
   if (variable === "risk") {
     return [
       "case",
-      ["==", value, null],
+      ["==", value, -1],
       "rgba(0,0,0,0)",
       [
         "match",
@@ -137,7 +144,7 @@ export function heatmapFillColor(variable: HeatVariable, hour: number): PaintExp
       ],
     ];
   }
-  return ["case", ["==", value, null], "rgba(0,0,0,0)", interpolate(value, RAMPS[variable].stops)];
+  return ["case", ["==", value, -1], "rgba(0,0,0,0)", interpolate(value, RAMPS[variable].stops)];
 }
 
 // Low is a whisper so the corridor reads as "where it gets worse", not a green carpet.
@@ -160,38 +167,44 @@ export function heatmapFillOpacity(
   gain = 1,
 ): number | PaintExpr {
   if (!visible || gain <= 0) return 0;
-  const value: PaintExpr = ["at", hour, ["get", variable]];
+  const value = hourlyValue(variable, hour);
   const scaled = (pairs: readonly (readonly [number, number])[]) =>
     pairs.map(([key, opacity]) => [key, Number((opacity * gain).toFixed(3))] as const);
   if (variable === "risk") {
     return [
       "case",
-      ["==", value, null],
+      ["==", value, -1],
       0,
       ["match", value, ...scaled(RISK_OPACITY).flat(), Number((0.3 * gain).toFixed(3))],
     ];
   }
-  return ["case", ["==", value, null], 0, interpolate(value, scaled(RAMPS[variable].opacity))];
+  return ["case", ["==", value, -1], 0, interpolate(value, scaled(RAMPS[variable].opacity))];
 }
 
-export interface CorridorFeatureCollection {
-  type: "FeatureCollection";
-  features: {
-    type: "Feature";
-    id: number;
-    properties: {
-      risk: (number | null)[];
-      wind: (number | null)[];
-      rain: (number | null)[];
-      snow: (number | null)[];
-    };
-    geometry: { type: "Polygon"; coordinates: [number, number][][] };
-  }[];
+interface CorridorProperties {
+  risk: (number | null)[];
+  wind: (number | null)[];
+  rain: (number | null)[];
+  snow: (number | null)[];
+  latitudeScale: number;
 }
 
-/** One square polygon per cell. Hourly values stay on the feature; the slider never rebuilds this. */
+export type CorridorFeatureCollection = GeoJSON.FeatureCollection<GeoJSON.Point, CorridorProperties>;
+
+/**
+ * Soft discs overlap across cell diagonals; their tails end about one cell away.
+ * 512 px is MapLibre's world size at z0. Exponential base 2 keeps the footprint fixed
+ * on the ground at fractional zooms too. Latitude accounts for Mercator stretching.
+ * Unlike a density heatmap, hue represents the cell value, not the count of neighbours.
+ */
+export function radarRadius(cellDeg: number): PaintExpr {
+  const radius = 512 * cellDeg / 360 * 0.95;
+  const atZoom = (zoom: number): PaintExpr => ["*", radius * 2 ** zoom, ["get", "latitudeScale"]];
+  return ["interpolate", ["exponential", 2], ["zoom"], 0, atZoom(0), 24, atZoom(24)];
+}
+
+/** One radar sample per cell; all 49 hours are uploaded once, never on slider input. */
 export function corridorFeatures(data: HeatmapResponse): CorridorFeatureCollection {
-  const half = data.cell_deg / 2;
   return {
     type: "FeatureCollection",
     features: data.cells.map((cell, index) => ({
@@ -202,20 +215,28 @@ export function corridorFeatures(data: HeatmapResponse): CorridorFeatureCollecti
         wind: data.wind[index] ?? [],
         rain: data.rain[index] ?? [],
         snow: data.snow[index] ?? [],
+        latitudeScale: 1 / Math.cos(Math.min(85, Math.abs(cell.lat)) * Math.PI / 180),
       },
-      geometry: {
-        type: "Polygon",
-        coordinates: [
-          [
-            [cell.lon - half, cell.lat - half],
-            [cell.lon + half, cell.lat - half],
-            [cell.lon + half, cell.lat + half],
-            [cell.lon - half, cell.lat + half],
-            [cell.lon - half, cell.lat - half],
-          ],
-        ],
-      },
+      geometry: { type: "Point", coordinates: [cell.lon, cell.lat] },
     })),
+  };
+}
+
+/** Barely visible at close range: exact sample extents, never an interpolated risk claim. */
+export function corridorOutlineFeatures(data: HeatmapResponse): GeoJSON.FeatureCollection<GeoJSON.Polygon, CorridorProperties> {
+  const half = data.cell_deg / 2;
+  return {
+    type: "FeatureCollection",
+    features: corridorFeatures(data).features.map((feature) => {
+      const [lon, lat] = feature.geometry.coordinates;
+      return {
+        ...feature,
+        geometry: { type: "Polygon", coordinates: [[
+          [lon - half, lat - half], [lon + half, lat - half],
+          [lon + half, lat + half], [lon - half, lat + half], [lon - half, lat - half],
+        ]] },
+      };
+    }),
   };
 }
 

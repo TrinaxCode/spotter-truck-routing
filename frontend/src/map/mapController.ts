@@ -4,7 +4,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 
 maplibregl.setWorkerUrl(workerUrl);
 import type { HeatmapResponse, HeatVariable, PlanResponse } from "../api/types";
-import { corridorFeatures, heatmapFillColor, heatmapFillOpacity, type PaintExpr } from "../lib/heatmap";
+import { corridorFeatures, corridorOutlineFeatures, heatmapFillColor, heatmapFillOpacity, radarRadius, type PaintExpr } from "../lib/heatmap";
 import { formatInchesPerHour, formatMiles, formatShortClock, formatSpeedMph, formatTempF } from "../lib/format";
 import { NEUTRAL_ROUTE_COLOR, riskColor } from "../lib/riskColor";
 import { segmentRoute } from "../lib/routeSegments";
@@ -48,6 +48,7 @@ const ROUTE_SOURCE = "routes";
 const SEGMENT_SOURCE = "segments";
 const CHECKPOINT_SOURCE = "checkpoints";
 const CORRIDOR_SOURCE = "corridor";
+const CORRIDOR_OUTLINE_SOURCE = "corridor-grid";
 /** One feature, rewritten every animation frame during trip playback. The only source that is. */
 const TRUCK_SOURCE = "truck";
 const TRUCK_ICON = "truck-arrow";
@@ -341,7 +342,13 @@ export function createMapController(container: HTMLElement, options: MapControll
   }
 
   function installLayers(): void {
-    for (const id of [CORRIDOR_SOURCE, ROUTE_SOURCE, SEGMENT_SOURCE, CHECKPOINT_SOURCE, TRUCK_SOURCE]) {
+    // Keep the <=300 samples in one world tile. Circle buckets discard buffered points
+    // outside a tile, so even a coarse tiled source loses offscreen samples at tile
+    // boundaries in chase view. Overscaling one tile keeps the field stable while panning.
+    if (!map.getSource(CORRIDOR_SOURCE)) {
+      map.addSource(CORRIDOR_SOURCE, { type: "geojson", data: EMPTY, maxzoom: 0 });
+    }
+    for (const id of [CORRIDOR_OUTLINE_SOURCE, ROUTE_SOURCE, SEGMENT_SOURCE, CHECKPOINT_SOURCE, TRUCK_SOURCE]) {
       if (!map.getSource(id)) map.addSource(id, { type: "geojson", data: EMPTY });
     }
 
@@ -353,16 +360,33 @@ export function createMapController(container: HTMLElement, options: MapControll
     addLayer(
       {
         id: "corridor",
-        type: "fill",
+        type: "circle",
         source: CORRIDOR_SOURCE,
         paint: {
-          "fill-color": "rgba(0,0,0,0)",
-          "fill-opacity": 0,
-          "fill-antialias": false,
+          "circle-color": "rgba(0,0,0,0)",
+          "circle-opacity": 0,
+          "circle-radius": radarRadius(heat?.cell_deg ?? 0.4) as AllPaintProperties["circle-radius"],
+          "circle-blur": 0.85,
+          "circle-pitch-alignment": "map",
+          "circle-pitch-scale": "map",
+          "circle-color-transition": { duration: 0 },
+          "circle-opacity-transition": { duration: 0 },
         },
       },
       anchor,
     );
+    addLayer({
+      id: "corridor-grid",
+      type: "line",
+      source: CORRIDOR_OUTLINE_SOURCE,
+      paint: {
+        "line-color": "rgba(0,0,0,0)",
+        "line-width": 0.6,
+        "line-opacity": 0,
+        "line-color-transition": { duration: 0 },
+        "line-opacity-transition": { duration: 0 },
+      },
+    }, anchor);
     addLayer(
       {
         id: "routes-other-casing",
@@ -747,7 +771,11 @@ export function createMapController(container: HTMLElement, options: MapControll
   function applyOpacity(): void {
     // Visibility is carried by `gain`, so hiding the heatmap fades instead of cutting.
     const opacity = heatmapFillOpacity(variable, hour, heat != null, gain);
-    paint("corridor", "fill-opacity", opacity as AllPaintProperties["fill-opacity"]);
+    paint("corridor", "circle-opacity", opacity as AllPaintProperties["circle-opacity"]);
+    const outline = heatmapFillOpacity(variable, hour, heat != null, gain * 0.18);
+    paint("corridor-grid", "line-opacity", [
+      "interpolate", ["linear"], ["zoom"], 7, 0, 9, outline,
+    ] as AllPaintProperties["line-opacity"]);
   }
 
   /** Eases the corridor opacity to its target. Reduced motion jumps. Never runs while sliding. */
@@ -775,7 +803,8 @@ export function createMapController(container: HTMLElement, options: MapControll
   }
 
   function applyFrame(): void {
-    paintExpr("corridor", "fill-color", heatmapFillColor(variable, hour));
+    paint("corridor", "circle-color", heatmapFillColor(variable, hour) as AllPaintProperties["circle-color"]);
+    paintExpr("corridor-grid", "line-color", heatmapFillColor(variable, hour));
     const target = desiredGain();
     if (fadeFrame !== 0 && target === fadeTarget) {
       // A fade toward this target is running and repaints the opacity every frame.
@@ -1008,6 +1037,8 @@ export function createMapController(container: HTMLElement, options: MapControll
   function applyHeat(): void {
     if (!styled) return;
     writeSource(CORRIDOR_SOURCE, heat ? corridorFeatures(heat) : EMPTY);
+    writeSource(CORRIDOR_OUTLINE_SOURCE, heat ? corridorOutlineFeatures(heat) : EMPTY);
+    paint("corridor", "circle-radius", radarRadius(heat?.cell_deg ?? 0.4) as AllPaintProperties["circle-radius"]);
     if (plan) {
       writeSource(CHECKPOINT_SOURCE, checkpointCollection(plan, frameStart()));
     }
@@ -1079,6 +1110,7 @@ export function createMapController(container: HTMLElement, options: MapControll
     }
     if (heat) {
       writeSource(CORRIDOR_SOURCE, corridorFeatures(heat));
+      writeSource(CORRIDOR_OUTLINE_SOURCE, corridorOutlineFeatures(heat));
     }
     if (truck) geoSource(TRUCK_SOURCE)?.setData(truckCollection());
     applyFocus();
@@ -1345,6 +1377,7 @@ export function createMapController(container: HTMLElement, options: MapControll
       geoSource(TRUCK_SOURCE)?.setData(EMPTY);
       if (stale) {
         writeSource(CORRIDOR_SOURCE, EMPTY);
+        writeSource(CORRIDOR_OUTLINE_SOURCE, EMPTY);
         cancelAnimationFrame(fadeFrame);
         fadeFrame = 0;
         gain = 0;

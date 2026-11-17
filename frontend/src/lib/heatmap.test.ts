@@ -1,10 +1,95 @@
 import { describe, expect, it } from "vitest";
-import { heatmapCoverage, heatmapFillColor, heatmapFillOpacity } from "./heatmap";
+import { corridorFeatures, corridorOutlineFeatures, heatmapCoverage, heatmapFillColor, heatmapFillOpacity, radarRadius, RAMPS } from "./heatmap";
+import { createExpression, latest, type StylePropertySpecification } from "@maplibre/maplibre-gl-style-spec";
+import { RISK_COLORS } from "./riskColor";
 import { segmentRoute } from "./routeSegments";
 import { etaHourIndex } from "./time";
 import type { HeatmapResponse, RouteOption } from "../api/types";
 
 describe("heatmap paint", () => {
+  function evaluate(expression: unknown, properties = {}, zoom = 0, color = false) {
+    const parsed = createExpression(expression, "paint", color ? latest.paint_circle["circle-color"] as StylePropertySpecification : undefined);
+    if (parsed.result === "error") throw new Error(JSON.stringify(parsed.value));
+    return parsed.value.evaluateWithoutErrorHandling({ zoom }, { type: "Point", properties });
+  }
+
+  it("keeps all missing frames transparent in every variable, including an absent row", () => {
+    for (const variable of ["risk", "wind", "rain", "snow"] as const) {
+      for (const row of [Array(49).fill(null), [], [12, null, 30]]) {
+        const properties = { [variable]: row };
+        for (const hour of row[0] === 12 ? [1, 24, 48] : [0, 24, 48]) {
+          expect(evaluate(heatmapFillOpacity(variable, hour, true), properties)).toBe(0);
+          expect(evaluate(heatmapFillColor(variable, hour), properties, 0, true).a).toBe(0);
+        }
+      }
+    }
+  });
+
+  it("reads known values from mixed nullable rows without rejecting the entire array", () => {
+    for (const variable of ["risk", "wind", "rain", "snow"] as const) {
+      for (const hour of [0, 2]) {
+        const mixed = { [variable]: [2, null, 1] };
+        const known = { [variable]: [2, 0, 1] };
+        expect(evaluate(heatmapFillColor(variable, hour), mixed, 0, true)).toEqual(evaluate(heatmapFillColor(variable, hour), known, 0, true));
+        expect(evaluate(heatmapFillOpacity(variable, hour, true), mixed)).toEqual(evaluate(heatmapFillOpacity(variable, hour, true), known));
+      }
+    }
+  });
+
+  it("preserves each categorical risk colour and keeps Low barely visible at every hour", () => {
+    for (const level of [0, 1, 2, 3, 4] as const) {
+      for (let hour = 0; hour < 49; hour++) {
+        const properties = { risk: Array(49).fill(level) };
+        const actual = evaluate(heatmapFillColor("risk", hour), properties, 0, true);
+        expect(actual).toEqual(evaluate(RISK_COLORS[level], {}, 0, true));
+        const opacity = evaluate(heatmapFillOpacity("risk", hour, true), properties);
+        expect(opacity).toBeGreaterThan(0);
+        if (level === 0) expect(opacity).toBeLessThan(0.08);
+        expect(evaluate(heatmapFillOpacity("risk", hour, true, 0.5), properties)).toBeCloseTo(opacity / 2, 3);
+      }
+    }
+  });
+
+  it("retains continuous ramp stops, clear dry cells, and theme/fade gain", () => {
+    for (const variable of ["wind", "rain", "snow"] as const) {
+      for (const [value, color] of RAMPS[variable].stops) {
+        const properties = { [variable]: Array(49).fill(value) };
+        expect(evaluate(heatmapFillColor(variable, 48), properties, 0, true)).toEqual(evaluate(color, {}, 0, true));
+        const opacity = evaluate(heatmapFillOpacity(variable, 48, true), properties);
+        expect(evaluate(heatmapFillOpacity(variable, 48, true, 0.85), properties)).toBeCloseTo(opacity * 0.85, 3);
+        if (value === 0 && variable !== "wind") expect(opacity).toBe(0);
+      }
+    }
+  });
+
+  it("scales the radar footprint with geographic cell size and doubles at every zoom", () => {
+    const small = radarRadius(0.2);
+    const large = radarRadius(0.4);
+    for (const zoom of [4, 4.5, 7, 10, 11]) {
+      const radius = evaluate(small, { latitudeScale: 1.3 }, zoom);
+      expect(evaluate(small, { latitudeScale: 1.3 }, zoom + 1)).toBeCloseTo(radius * 2);
+      expect(evaluate(large, { latitudeScale: 1.3 }, zoom)).toBeCloseTo(radius * 2);
+    }
+  });
+
+  it("uses cell centres and retains the original hourly arrays on a stable feature", () => {
+    const row = Array.from({ length: 49 }, (_, hour) => hour === 48 ? null : 2);
+    const data: HeatmapResponse = {
+      plan_id: "radar", start: "2026-11-16T14:00:00Z", hours: 49, cell_deg: 0.4,
+      load_lbs: 35000, cells: [{ lon: -100, lat: 40 }],
+      risk: [row], wind: [row], rain: [row], snow: [row],
+    };
+    const feature = corridorFeatures(data).features[0];
+    expect(feature.id).toBe(0);
+    expect(feature.geometry).toEqual({ type: "Point", coordinates: [-100, 40] });
+    expect(feature.properties.risk).toBe(row);
+    expect(feature.properties.latitudeScale).toBeCloseTo(1 / Math.cos(40 * Math.PI / 180));
+    const outline = corridorOutlineFeatures(data).features[0];
+    expect(outline.id).toBe(feature.id);
+    expect(outline.properties).toEqual(feature.properties);
+    expect(outline.geometry.coordinates).toEqual([[[-100.2, 39.8], [-99.8, 39.8], [-99.8, 40.2], [-100.2, 40.2], [-100.2, 39.8]]]);
+  });
+
   it("bakes the hour index into the expression", () => {
     const hour3 = heatmapFillColor("risk", 3);
     const hour0 = heatmapFillColor("risk", 0);
