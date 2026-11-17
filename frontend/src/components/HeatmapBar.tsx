@@ -179,7 +179,7 @@ export function HeatmapBar({
   );
 
   return (
-    <div ref={wrapRef} className="time-wrap" data-map-overlay="" data-overlay-edge="bottom">
+    <div ref={wrapRef} className="time-wrap" data-map-overlay="" data-overlay-edge="bottom" data-idle={status === "idle"}>
       <Legend variable={variable} visible={visible} />
       <section
         ref={timelineRef}

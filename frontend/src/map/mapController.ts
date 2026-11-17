@@ -11,6 +11,7 @@ import { segmentRoute } from "../lib/routeSegments";
 import { etaHourIndex, floorHourIso } from "../lib/time";
 import type { MapGestureProbe, MapHandle, TruckPosition } from "./handle";
 import type { Truck3D } from "./truck3d";
+import { createWeatherAnimation } from "./weatherAnimation";
 import { distanceToLine, hapticHint, LONG_PRESS_MS, nearestPointIndex, TOUCH_RADIUS, withinPressSlop, type ScreenPoint } from "../lib/gestures";
 import "../styles/map-gestures.css";
 
@@ -119,6 +120,13 @@ export function createMapController(container: HTMLElement, options: MapControll
     pitchWithRotate: false,
     touchPitch: false,
     fadeDuration: 0,
+  });
+  // Animated wind, rain and snow over the corridor. A canvas overlay redraws only itself, so the
+  // map is not forced into continuous repaints; it pauses when hidden or under reduced motion.
+  const weather = createWeatherAnimation(map, {
+    reducedMotion: () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    mode: "overlay",
+    theme,
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false, showZoom: true }), "top-right");
   // Phones keep the credits bottom-left, away from the zoom buttons, because the sheet leaves little map.
@@ -634,7 +642,14 @@ export function createMapController(container: HTMLElement, options: MapControll
   function followTruck(): void {
     if (!truck || !chase || chaseEntering || mapPointers.size || map.isMoving()) return;
     chaseBearing = easeBearing(chaseBearing, truck.bearing, truck.stopped ? 0 : 0.06);
-    map.jumpTo({ center: [truck.lon, truck.lat], bearing: chaseBearing + chaseBearingOffset, padding: followPadding ?? overlayPadding() });
+    // The drive HUD mounts after the chase starts and changes height on phones; re-measure the
+    // overlays now and then so the truck stays in the uncovered part of the map.
+    const now = performance.now();
+    if (!followPadding || now - followPaddingAt > 500) {
+      followPadding = overlayPadding();
+      followPaddingAt = now;
+    }
+    map.jumpTo({ center: [truck.lon, truck.lat], bearing: chaseBearing + chaseBearingOffset, padding: followPadding });
   }
 
   function syncCameraGestures(): void {
@@ -1372,6 +1387,7 @@ export function createMapController(container: HTMLElement, options: MapControll
       // The previous corridor belongs to the previous trip; drop it until the new one arrives.
       const stale = heat !== null;
       heat = null;
+      weather.setData(null);
       if (!styled) return;
       applyPlan();
       geoSource(TRUCK_SOURCE)?.setData(EMPTY);
@@ -1399,6 +1415,7 @@ export function createMapController(container: HTMLElement, options: MapControll
     setHeatmap(data) {
       if (!alive) return;
       heat = data;
+      weather.setData(data);
       if (!styled) return;
       applyHeat();
     },
@@ -1407,12 +1424,14 @@ export function createMapController(container: HTMLElement, options: MapControll
       hour = nextHour;
       variable = nextVariable;
       heatVisible = visible;
+      weather.setFrame(nextHour, nextVariable, visible);
       if (!styled) return;
       applyFrame();
     },
     setBasemap(nextTheme) {
       cancelPress();
       theme = nextTheme === "dark" ? "dark" : "light";
+      weather.setTheme(theme);
       loadingStyle = true;
       map.setStyle(STYLES[theme]);
     },
@@ -1467,6 +1486,7 @@ export function createMapController(container: HTMLElement, options: MapControll
     },
     destroy() {
       alive = false;
+      weather.destroy();
       cancelPress();
       mapPointers.clear();
       documentPointers.clear();

@@ -99,10 +99,18 @@ export function DeparturePicker({ id, value, onChange, onBlur, error, now: nowPr
       if (width < 1) return;
       panel.style.setProperty("--departure-width", `${width}px`);
       const height = Math.min(panel.offsetHeight, window.innerHeight - margin * 2);
+      const clampTop = (value: number) => Math.max(margin, Math.min(value, window.innerHeight - height - margin));
+      // Beside the trip panel when the map has room: the picker then covers no form field.
+      const side = trigger.closest(".panel")?.getBoundingClientRect();
+      if (side && side.right + 12 + width <= window.innerWidth - margin) {
+        panel.style.setProperty("--departure-top", `${clampTop(rect.top - 64)}px`);
+        panel.style.setProperty("--departure-left", `${side.right + 12}px`);
+        return;
+      }
       let top = rect.bottom + 6;
       if (top + height > window.innerHeight - margin) {
         const above = rect.top - 6 - height;
-        top = above >= margin ? above : margin;
+        top = above >= margin ? above : clampTop(top);
       }
       const left = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
       panel.style.setProperty("--departure-top", `${top}px`);

@@ -38,13 +38,18 @@
     height: 44px;
     margin-top: -19px;
     background: radial-gradient(circle, #fff 0 9px, var(--accent) 9px 12px, transparent 13px);
-    box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+    /* No box shadow: it would outline the whole 44 px hit box as a grey disc. */
+    box-shadow: none;
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.35));
+  }
+  .timeline .slider input:disabled::-webkit-slider-thumb {
+    background: radial-gradient(circle, #fff 0 9px, var(--edge) 9px 12px, transparent 13px);
   }
   .timeline .slider input::-moz-range-thumb {
     width: 44px;
     height: 44px;
     background: radial-gradient(circle, #fff 0 9px, var(--accent) 9px 12px, transparent 13px);
-    box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+    box-shadow: none;
   }
   .timeline .slider input:active::-webkit-slider-thumb {
     transform: none;

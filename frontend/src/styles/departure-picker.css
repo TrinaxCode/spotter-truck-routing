@@ -271,3 +271,9 @@
     scroll-behavior: auto;
   }
 }
+
+/* The trip panel is its own stacking context (z-index 10, like the forecast card after it in the
+   DOM); lift it while the picker is open so the popover beside it is not covered. */
+.panel:has(.departure-panel) {
+  z-index: 25;
+}

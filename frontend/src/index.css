@@ -1418,9 +1418,23 @@ h2 {
   background-color: var(--halt);
   background-image: repeating-linear-gradient(-45deg, transparent 0 1.5px, rgb(255 255 255 / 0.75) 1.5px 3px);
 }
-.strip-bar[aria-checked="true"] {
-  box-shadow: inset 0 0 0 1.5px var(--ink);
-  background: var(--raised-strong);
+/* The picked hour is marked on its own bar (accent ring) and with a dot under it, not with an
+   empty full-height frame that reads as a missing bar. */
+.strip-bar[aria-checked="true"] .strip-fill {
+  box-shadow:
+    0 0 0 2px var(--surface-solid),
+    0 0 0 4px var(--accent);
+}
+.strip-bar[aria-checked="true"]::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 .strip-bar[data-suggested="true"]::after {
   content: "";
@@ -2998,5 +3012,12 @@ kbd {
   .tools .chips button {
     min-width: var(--hit);
     justify-content: center;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Before the first plan there is no forecast to scrub; give the phone's height to the form. */
+  .time-wrap[data-idle="true"] {
+    display: none;
   }
 }

@@ -104,6 +104,10 @@ test("the phone sheet cycles through three snaps and nothing overflows sideways"
   await handle.click();
   await expect(sheet).toHaveAttribute("data-snap", "expanded");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  // Phones show the forecast card only once a plan exists.
+  await expect(page.getByTestId("heatmap-slider")).toBeHidden();
+  await page.getByRole("button", { name: "Plan routes" }).click();
+  await expect(page.getByText("Recommended")).toBeVisible();
   const slider = await page.getByTestId("heatmap-slider").boundingBox();
   boxInside(slider!, 375, 812);
 });

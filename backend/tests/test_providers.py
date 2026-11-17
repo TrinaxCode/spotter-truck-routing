@@ -242,3 +242,23 @@ def test_routing_uses_a_timeout_long_enough_for_coast_to_coast_routes():
 
     # TomTom takes ~16 s for Los Angeles -> New York truck routes with alternatives.
     assert ROUTING_TIMEOUT_S >= 30
+
+
+def test_connection_errors_are_retried_once_then_reported(no_network):
+    import requests
+
+    from planner.exceptions import UpstreamError
+    from planner.services.http import get_json
+
+    url = "https://example.test/data"
+    no_network.get(url, body=requests.ConnectTimeout("connect timeout"))
+    no_network.get(url, json={"ok": True})
+    assert get_json(url, {}) == {"ok": True}
+    assert len(no_network.calls) == 2
+
+    no_network.reset()
+    no_network.get(url, body=requests.ConnectionError("refused"))
+    no_network.get(url, body=requests.ConnectionError("refused"))
+    with pytest.raises(UpstreamError):
+        get_json(url, {})
+    assert len(no_network.calls) == 2
