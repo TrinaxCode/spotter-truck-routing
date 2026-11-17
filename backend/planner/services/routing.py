@@ -26,6 +26,8 @@ from .sampling import (
 def interpolate(value: float, pairs: Sequence[tuple[float, float]]) -> float:
     index = min(len(pairs) - 2, max(0, bisect_right([p[0] for p in pairs], value) - 1))
     (x0, y0), (x1, y1) = pairs[index:index + 2]
+    if x1 == x0:
+        return y0
     return y0 + (y1 - y0) * max(0, min(1, (value - x0) / (x1 - x0)))
 
 

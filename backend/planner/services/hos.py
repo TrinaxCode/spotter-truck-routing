@@ -2,6 +2,11 @@ from dataclasses import dataclass
 
 from .risk import nonnegative
 
+BREAK_AFTER_S = 8 * 3600
+CYCLE_S = 11 * 3600
+REST_S = 10 * 3600
+BREAK_S = 30 * 60
+
 
 @dataclass(frozen=True)
 class Break:
@@ -15,11 +20,11 @@ def break_schedule(total_drive_seconds: float) -> list[Break]:
     nonnegative(total_drive_seconds)
     result = []
     cycle = 0
-    while cycle * 39600 + 28800 < total_drive_seconds:
-        result.append(Break("break_30m", cycle * 39600 + 28800, 1800))
-        rest_at = (cycle + 1) * 39600
+    while cycle * CYCLE_S + BREAK_AFTER_S < total_drive_seconds:
+        result.append(Break("break_30m", cycle * CYCLE_S + BREAK_AFTER_S, BREAK_S))
+        rest_at = (cycle + 1) * CYCLE_S
         if rest_at < total_drive_seconds:
-            result.append(Break("rest_10h", rest_at, 36000))
+            result.append(Break("rest_10h", rest_at, REST_S))
         cycle += 1
     return result
 

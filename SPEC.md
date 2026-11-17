@@ -1,7 +1,6 @@
 # SPEC — Weather-Aware Truck Routing (Spotter take-home)
 
-Source of truth for every agent. The original brief is `fs-assessment-spotter.pdf`.
-If something here contradicts the PDF, the PDF wins — tell the orchestrator.
+Design decisions and implementation contracts for the weather-aware truck routing assessment.
 
 ## 1. Brief (verbatim requirements)
 
@@ -141,7 +140,7 @@ Geometry is simplified server-side (Douglas-Peucker, ~0.0005° tolerance, ≤ 30
   "wind":  [[12.1,"…"]], "rain": [[0.0,"…"]], "snow": [[0.0,"…"]]
 }
 ```
-Columnar arrays (`risk[i][h]` for `cells[i]`, hour `h`), floats rounded to 2 dp, null where unavailable. Grid: square cells sized from the routes' bbox (`cell_deg = clamp(diag/25, 0.15, 0.75)`), keeping cells whose centre is within `max(30 mi, 1.5 cells)` of any route; cap 300 cells (coarsen if exceeded). Risk uses the plan's load. `404` if plan unknown/expired.
+Columnar arrays (`risk[i][h]` for `cells[i]`, hour `h`), floats rounded to 2 dp, null where unavailable. Grid: square cells sized from the routes' bbox (`cell_deg = clamp(diag/25, 0.15, 0.75)`), keeping cells whose centre is within `max(30 mi, 1.5 cells)` of any route; cap 450 cells (coarsen if exceeded). Risk uses the plan's load. `404` if plan unknown/expired.
 
 Plans are stored in the Django cache (file-based or DB cache so gunicorn workers share it) for 6 h.
 

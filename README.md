@@ -2,8 +2,8 @@
 
 Plan a truck trip, get three route options, and see which one is safest given the forecast **at the time the truck will actually be there**, its cargo weight, and travel time.
 
-- **Live app:** _TBD_ · **API:** _TBD_ · **Walkthrough:** _TBD_
-- Brief: [`fs-assessment-spotter.pdf`](fs-assessment-spotter.pdf) · Full spec and decisions: [`SPEC.md`](SPEC.md)
+- **Live app:** https://spotter-truck-routing-flame.vercel.app · **API:** https://backend-production-ea6c421c.up.railway.app/api/health · **Walkthrough:** pending Loom recording
+- Full spec and decisions: [`SPEC.md`](SPEC.md)
 
 ## What it does
 
@@ -15,18 +15,16 @@ Plan a truck trip, get three route options, and see which one is safest given th
 6. The map shows every route, checkpoint, risk level and ETA, plus a corridor heatmap with a 0–48 h slider (Risk / Wind / Rain / Snow).
 7. Departure options compare the next 24 hours on the same routes and suggest the earliest strictly safer departure, when one exists.
 
-### Beyond the brief (all serving the same decision: which route, and when)
+### Beyond the brief
 
-| Feature | What it gives a dispatcher |
-|---|---|
-| **Best time to leave** | A 24-hour strip re-scores the same routes for later departures and suggests the earliest one that is strictly safer, with one-click Apply. No extra routing calls. |
-| **Drive mode** | A 3D truck (three.js, lazy-loaded) drives the selected route on a tilted chase camera, pausing at HOS stops, while the heatmap follows the truck's hour. A HUD shows clock, mile, live weather and the next hazard or stop. |
-| **Weather profile** | Per-mile chart of risk, sustained wind (with the 25/35/45/55 mph thresholds), precipitation and HOS stops, synced with the map. |
-| **Driver briefing** | Print or save as PDF: the recommendation, all routes compared and the full checkpoint log (ETA, risk, wind/gust, rain, snow, temperature, reasons). |
-| **Share links, recent trips, examples** | The address bar always reopens the current trip; recent trips stay in the browser; four example trips start a plan in one click. |
-| **Touch gestures** | Draggable bottom sheet with velocity snapping, swipe between routes, scrub the departure strip and the weather chart, long-press the map to inspect, two-finger rotate/tilt in drive mode. Every gesture has a button or keyboard equivalent. |
-| **Keyboard shortcuts** | `1` `2` `3` routes, `D` drive, `E` edit, `S` share, `P` print, `T` theme, `?` help. |
-| **Provider protection** | Per-client rate limits plus a service-wide daily budget of real TomTom calls, so a public demo cannot exhaust the free quota. |
+The app also compares departure times, supports a drive-mode preview and a printable driver briefing, and offers sharing and keyboard shortcuts.
+
+## Where to look first
+
+- [`risk.py`](backend/planner/services/risk.py): weather thresholds and load rules.
+- [`recommend.py`](backend/planner/services/recommend.py): route scoring and ranking.
+- [`weather.select_weather`](backend/planner/services/weather.py): forecast selection at each ETA.
+- [`mapController`](frontend/src/map/mapController.ts): map layers and heatmap rendering.
 
 ## Architecture
 
@@ -90,14 +88,14 @@ cd backend  && uv run pytest -q && uv run ruff check .
 cd frontend && npm run typecheck && npm run lint && npm run test && npm run build && npm run e2e
 ```
 
-- **Backend:** about 490 tests with no network access. They pin every risk boundary and load rule, each ranking tie-break, checkpoint spacing, ETA interpolation, HOS, the heatmap grid and the API error shapes. `tests/spec/` is an independent black-box suite written only from `SPEC.md`.
+- **Backend:** about 525 tests with no network access. They pin every risk boundary and load rule, each ranking tie-break, checkpoint spacing, ETA interpolation, HOS, the heatmap grid and the API error shapes. `tests/spec/` is an independent black-box suite written only from `SPEC.md`.
 - **Frontend:** unit tests and a contract test against real backend payloads. Playwright E2E (45 tests) covers plan → select route → slide heatmap → checkpoint popup, drive mode, departure suggestions and touch gestures at 375, 768 and 1280 px, and asserts the slider and the playback never rebuild the map sources.
 
 ## Limitations
 
 - The forecast horizon is about 16 days; checkpoints past it are reported as Unknown.
 - HOS is simplified: no 14 h duty window, weekly limits or sleeper splits.
-- Weather is sampled on a ~0.1° grid (close to the forecast model's resolution). The heatmap is capped at 300 cells.
+- Weather is sampled on a ~0.1° grid (close to the forecast model's resolution). The heatmap is capped at 450 cells.
 - The file cache is shared by the workers of a single instance; horizontal scaling would need Redis.
 - Route results are cached per departure **hour** (15 min TTL): two departures within the same hour reuse TomTom's geometry and drive times, while every ETA is still computed from the exact departure. Only the traffic pattern used for that hour can differ.
 - Concurrent identical requests on a cold cache can both call the upstream APIs (results stay consistent; there is no cross-worker request coalescing).
